@@ -6,7 +6,7 @@ import { storeApiKey } from "../auth/apiKey";
 import { anOrder } from "../test/fixtures/orders";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
-import { NewOrderPage } from "./NewOrderPage";
+import { NewOrderForm } from "./NewOrderForm";
 
 const ORDERS = "http://localhost:8080/v1/orders";
 
@@ -14,10 +14,10 @@ function renderPage() {
   storeApiKey("gk_test_abc");
   return renderWithProviders(
     [
-      { path: "/app/orders/new", element: <NewOrderPage /> },
+      { path: "/app/orders", element: <NewOrderForm /> },
       { path: "/app/orders/:id", element: <div>detalhe</div> },
     ],
-    { initialEntries: ["/app/orders/new"] },
+    { initialEntries: ["/app/orders"] },
   );
 }
 
@@ -28,7 +28,7 @@ async function fillValidForm() {
   await userEvent.type(screen.getByLabelText("Documento"), "12345678909");
 }
 
-describe("NewOrderPage", () => {
+describe("NewOrderForm", () => {
   it("sendsCentsAndAStableIdempotencyKeyOnDoubleClick", async () => {
     const keys: (string | null)[] = [];
     const bodies: Record<string, unknown>[] = [];
@@ -111,7 +111,7 @@ describe("NewOrderPage", () => {
   });
 });
 
-describe("NewOrderPage matches the approved mockup", () => {
+describe("NewOrderForm matches the approved mockup", () => {
   it("usesSmallCapsLabelsTallInputsAndADisplayAmount", () => {
     renderPage();
 

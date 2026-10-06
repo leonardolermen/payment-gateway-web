@@ -23,9 +23,9 @@ Painel do merchant e checkout hospedado do payment gateway (React 19, Vite, Tail
 | Rota | O que é |
 | --- | --- |
 | `/app/login` | cola a chave do merchant e valida contra a API |
-| `/app/orders` | lista de pedidos, filtro por status, paginação |
-| `/app/orders/new` | novo pedido (escolhe ou cria o cliente na hora) |
-| `/app/orders/:id` | detalhe, tentativas, link de checkout, ações e estorno |
+| `/app/orders` | a tela inicial: lista de pedidos (filtro por status, paginação) e o formulário de novo pedido à esquerda; à direita, o pedido escolhido |
+| `/app/orders/:id` | a mesma tela com o pedido aberto à direita: link de checkout, ações, estorno e tentativas |
+| `/app/orders/new` | redireciona para `/app/orders`, onde o formulário fica |
 | `/app/customers` | lista de clientes |
 | `/app/customers/new` | novo cliente |
 | `/pay/:token` | checkout do pagador: Pix, boleto ou cartão (sem chave, o token vem na URL) |
@@ -65,7 +65,7 @@ Roteiro, com o gateway na 8080 e `pnpm dev` na 5173:
 
 1. Login em `/app/login` com a chave de teste.
 2. `/app/customers/new`: crie um cliente.
-3. `/app/orders/new`: crie um pedido para ele e abra o detalhe.
+3. Em `/app/orders`, preencha "Nova cobrança" com esse cliente: o pedido abre à direita, com o link.
 4. Gere o link de checkout e abra `/pay/:token` em outra aba.
 5. Escolha Pix: o QR code e o copia-e-cola aparecem.
 6. Simule o pagamento no provedor de teste: o checkout vira "pago" e o detalhe do pedido mostra o status pago.

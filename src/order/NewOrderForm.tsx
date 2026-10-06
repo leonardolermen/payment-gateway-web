@@ -8,11 +8,14 @@ import { saoPauloLocalToIso } from "../support/dates";
 import { messageFor } from "../support/gatewayError";
 import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
-import { PageHeader } from "../support/ui/PageHeader";
 import { MoneyInput } from "./MoneyInput";
 import { createOrder, orderKeys } from "./orderApi";
 
-export function NewOrderPage() {
+type Props = { onCreated?: () => void };
+
+// Lives under the orders list, as in the mockup: creating does not leave the list. The workspace
+// remounts it after a success, which also mints the next idempotency key.
+export function NewOrderForm({ onCreated }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -29,11 +32,13 @@ export function NewOrderPage() {
   const [customerError, setCustomerError] = useState(false);
 
   const create = useMutation({
-    mutationFn: (body: Parameters<typeof createOrder>[0]) => createOrder(body, idempotencyKey.current),
+    mutationFn: (body: Parameters<typeof createOrder>[0]) =>
+      createOrder(body, idempotencyKey.current),
     onSuccess: (order) => {
       void queryClient.invalidateQueries({ queryKey: orderKeys.all });
       // Task 5 reads the state: the link is shown once, right after creation.
       navigate(`/app/orders/${order.id}`, { state: { checkoutUrl: order.checkout_url } });
+      onCreated?.();
     },
   });
 
@@ -61,46 +66,53 @@ export function NewOrderPage() {
   }
 
   return (
-    <section className="mx-auto max-w-lg space-y-4">
-      <PageHeader title="Nova cobrança" />
+    <Card>
+      <h2 className="mb-4 font-display text-[15px] font-semibold">Nova cobrança</h2>
 
-      <Card>
-        <form onSubmit={submit} className="space-y-4" noValidate>
-          <MoneyInput valueCents={amount} onChange={setAmount} />
-          {amountError && <p className="text-sm text-danger">Informe um valor válido.</p>}
+      <form onSubmit={submit} className="space-y-4" noValidate>
+        <MoneyInput valueCents={amount} onChange={setAmount} />
+        {amountError && <p className="text-sm text-danger">Informe um valor válido.</p>}
 
-          <TextField
-            label="Descrição"
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
-          />
-          <TextField
-            label="Referência"
-            value={reference}
-            onChange={(event) => setReference(event.target.value)}
-          />
-          <TextField
-            label="Vencimento"
-            type="datetime-local"
-            value={expiresLocal}
-            onChange={(event) => setExpiresLocal(event.target.value)}
-          />
+        <TextField
+          label="Descrição"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+        />
 
-          <CustomerPicker value={customer} onChange={setCustomer} />
+        <CustomerPicker value={customer} onChange={setCustomer} />
 
-          {customerError && <p className="text-sm text-danger">Escolha ou informe um cliente.</p>}
+        {customerError && <p className="text-sm text-danger">Escolha ou informe um cliente.</p>}
 
-          {create.isError && (
-            <p role="alert" className="text-sm text-danger">
-              {messageFor(create.error)}
-            </p>
-          )}
+        {/* Not in the mockup, kept: most charges need neither, so they fold away. */}
+        <details className="group text-sm">
+          <summary className="cursor-pointer text-muted select-none hover:text-ink">
+            Referência e vencimento
+          </summary>
+          <div className="mt-3 space-y-4">
+            <TextField
+              label="Referência"
+              value={reference}
+              onChange={(event) => setReference(event.target.value)}
+            />
+            <TextField
+              label="Vencimento"
+              type="datetime-local"
+              value={expiresLocal}
+              onChange={(event) => setExpiresLocal(event.target.value)}
+            />
+          </div>
+        </details>
 
-          <Button type="submit" size="lg" disabled={create.isPending}>
-            Criar cobrança
-          </Button>
-        </form>
-      </Card>
-    </section>
+        {create.isError && (
+          <p role="alert" className="text-sm text-danger">
+            {messageFor(create.error)}
+          </p>
+        )}
+
+        <Button type="submit" size="lg" disabled={create.isPending}>
+          Criar cobrança
+        </Button>
+      </form>
+    </Card>
   );
 }
