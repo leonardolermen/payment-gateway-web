@@ -1,3 +1,4 @@
+import type { QueryClient } from "@tanstack/react-query";
 import { merchantRequest } from "../support/merchantRequest";
 import type { CustomerChoice } from "../customer/types";
 import type { Order, OrderStatus, Payment } from "./types";
@@ -53,4 +54,44 @@ export async function createOrder(body: NewOrder, idempotencyKey: string): Promi
     idempotencyKey,
   });
   return data;
+}
+
+// The detail, its attempts and every list all show a piece of the same order: refreshing one
+// leaves the others telling the old story.
+export async function invalidateOrder(queryClient: QueryClient, id: string): Promise<void> {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: orderKeys.detail(id) }),
+    queryClient.invalidateQueries({ queryKey: orderKeys.attempts(id) }),
+    queryClient.invalidateQueries({ queryKey: orderKeys.all }),
+  ]);
+}
+
+// Idempotency keys are minted by the caller once per click, so a double click replays one action.
+export async function cancelOrder(id: string, idempotencyKey: string): Promise<Order> {
+  const { data } = await merchantRequest<Order>(`/v1/orders/${id}/cancel`, {
+    method: "POST",
+    idempotencyKey,
+  });
+  return data;
+}
+
+export async function rotateCheckoutToken(id: string, idempotencyKey: string): Promise<Order> {
+  const { data } = await merchantRequest<Order>(`/v1/orders/${id}/checkout-token/rotate`, {
+    method: "POST",
+    idempotencyKey,
+  });
+  return data;
+}
+
+// Omitting the amount means a full refund; the API answers 201 or 202, both are success here.
+export async function refundPayment(
+  paymentId: string,
+  amount: number | undefined,
+  idempotencyKey: string,
+): Promise<void> {
+  await merchantRequest(`/v1/payments/${paymentId}/refunds`, {
+    method: "POST",
+    body: amount === undefined ? undefined : { amount },
+    idempotencyKey,
+  });
 }

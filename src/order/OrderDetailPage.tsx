@@ -1,12 +1,21 @@
 import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router";
 import { formatDateTime } from "../support/dates";
 import { formatBrl } from "../support/money";
 import { AttemptsTable } from "./AttemptsTable";
+import { CheckoutLinkPanel } from "./CheckoutLinkPanel";
 import { getOrder, listAttempts, orderKeys } from "./orderApi";
+import { OrderActions } from "./OrderActions";
 import { StatusBadge } from "./StatusBadge";
+import type { Payment } from "./types";
 
 const IN_FLIGHT = new Set(["PENDING", "AUTHORIZED", "CREATED"]);
+
+function pollInterval(attempts: Payment[]): number | false {
+  const inFlight = attempts.some((attempt) => IN_FLIGHT.has(attempt.status));
+  return inFlight && document.visibilityState === "visible" ? 5_000 : false;
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -20,16 +29,34 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 export function OrderDetailPage() {
   const { id = "" } = useParams();
 
-  const order = useQuery({ queryKey: orderKeys.detail(id), queryFn: () => getOrder(id) });
+  const location = useLocation();
+  const navigate = useNavigate();
+  // Read once into state, then wiped from history: the link is shown only right after creation,
+  // and a refresh must not resurrect it.
+  const [initialUrl] = useState<string | null>(
+    (location.state as { checkoutUrl?: string } | null)?.checkoutUrl ?? null,
+  );
+  useEffect(() => {
+    if (initialUrl) {
+      navigate(".", { replace: true, state: null });
+    }
+  }, [initialUrl, navigate]);
 
   const attempts = useQuery({
     queryKey: orderKeys.attempts(id),
     queryFn: () => listAttempts(id),
-    // Poll only while the payer may still be paying; a settled order stops costing requests.
-    refetchInterval: (query) => {
-      const inFlight = (query.state.data ?? []).some((attempt) => IN_FLIGHT.has(attempt.status));
-      return inFlight && document.visibilityState === "visible" ? 5_000 : false;
-    },
+    refetchInterval: (query) => pollInterval(query.state.data ?? []),
+    refetchIntervalInBackground: false,
+  });
+
+  // Poll only while the payer may still be paying; a settled order stops costing requests.
+  const pollEvery = pollInterval(attempts.data ?? []);
+
+  // Same cadence as the attempts: a paid attempt must turn the summary PAID without a reload.
+  const order = useQuery({
+    queryKey: orderKeys.detail(id),
+    queryFn: () => getOrder(id),
+    refetchInterval: pollEvery,
     refetchIntervalInBackground: false,
   });
 
@@ -57,8 +84,8 @@ export function OrderDetailPage() {
         <Field label="Vence em">{data.expires_at ? formatDateTime(data.expires_at) : "—"}</Field>
       </dl>
 
-      {/* CheckoutLinkPanel: Task 5 */}
-      {/* OrderActions: Task 5 */}
+      <CheckoutLinkPanel order={data} initialUrl={initialUrl} />
+      <OrderActions order={data} attempts={attempts.data ?? []} />
 
       <div>
         <h2 className="mb-2 font-medium">Tentativas de pagamento</h2>
