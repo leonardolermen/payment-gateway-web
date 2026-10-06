@@ -69,4 +69,19 @@ describe("LoginPage", () => {
 
     expect(await screen.findByTestId("where")).toHaveTextContent("/app/orders/01X");
   });
+
+  it("dropsTheCacheOfThePreviousMerchantOnLogin", async () => {
+    server.use(
+      http.get("http://localhost:8080/v1/merchant", () =>
+        HttpResponse.json({ ...merchant, name: "B" }),
+      ),
+    );
+    const { queryClient } = renderWithProviders(routes, { initialEntries: ["/app/login"] });
+    queryClient.setQueryData(["merchant"], { name: "A" });
+
+    await logIn("gk_test_b");
+
+    await screen.findByTestId("where");
+    expect(queryClient.getQueryData(["merchant"])).toBeUndefined();
+  });
 });

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router";
 import { storeApiKey } from "./apiKey";
 import { getMerchant } from "./merchantApi";
@@ -10,6 +11,7 @@ function safeNext(next: string | null): string {
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [params] = useSearchParams();
   const [key, setKey] = useState("");
   const [failed, setFailed] = useState(false);
@@ -24,6 +26,8 @@ export function LoginPage() {
       const trimmed = key.trim();
       await getMerchant(trimmed);
       storeApiKey(trimmed);
+      // Whatever is cached belongs to a previous key; the new session starts empty.
+      queryClient.clear();
       navigate(safeNext(params.get("next")), { replace: true });
     } catch {
       // Fixed copy: the server detail is not for the screen, and a network failure reads the same here.

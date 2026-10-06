@@ -61,4 +61,24 @@ describe("RequireApiKey", () => {
     expect(await screen.findByTestId("login")).toHaveTextContent("/app/login?next=%2Fapp%2Forders");
     expect(readApiKey()).toBeNull();
   });
+
+  it("drops the cached data of the previous key on a 401", async () => {
+    storeApiKey("gk_test_abc");
+    server.use(
+      http.get("http://localhost:8080/v1/orders", () =>
+        HttpResponse.json(
+          { type: "urn:gateway:UNAUTHENTICATED", status: 401, detail: "x" },
+          { status: 401 },
+        ),
+      ),
+    );
+    const { queryClient } = renderWithProviders(routesFor(<Caller />), {
+      initialEntries: ["/app/orders"],
+    });
+    queryClient.setQueryData(["merchant"], { name: "A" });
+
+    await screen.findByTestId("login");
+
+    expect(queryClient.getQueryData(["merchant"])).toBeUndefined();
+  });
 });
