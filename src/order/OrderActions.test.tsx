@@ -106,3 +106,47 @@ describe("OrderActions", () => {
     expect(body === "" || body === "{}").toBe(true);
   });
 });
+
+describe("OrderActions after a refund", () => {
+  it("aSecondRefundIsBlockedUntilTheFirstIsReflected", async () => {
+    let refunds = 0;
+    server.use(
+      http.get(`${API}/orders/ord_00000001/payments`, () => HttpResponse.json([paid()])),
+      http.post(`${API}/payments/pay_00000001/refunds`, () => {
+        refunds += 1;
+        return HttpResponse.json({ id: "ref_1" }, { status: 202 });
+      }),
+    );
+    renderActions(anOrder({ status: "PAID" }), [paid()]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Reembolsar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar reembolso" }));
+
+    expect(await screen.findByText("Reembolso em processamento")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reembolsar" })).not.toBeInTheDocument();
+    expect(refunds).toBe(1);
+  });
+});
+
+describe("RefundDialog amount", () => {
+  it("refusesZeroAndClearsTheErrorWhenSwitchingToTotal", async () => {
+    let calls = 0;
+    server.use(
+      http.post(`${API}/payments/pay_00000001/refunds`, () => {
+        calls += 1;
+        return HttpResponse.json({}, { status: 201 });
+      }),
+    );
+    renderActions(anOrder({ status: "PAID" }), [paid()]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Reembolsar" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Parcial" }));
+    await userEvent.type(screen.getByLabelText("Valor"), "0");
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar reembolso" }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("radio", { name: /Total/ }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(calls).toBe(0);
+  });
+});

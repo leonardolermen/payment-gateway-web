@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { formatDateTime } from "../support/dates";
 import { formatBrl } from "../support/money";
@@ -9,6 +9,10 @@ import { getOrder, listAttempts, orderKeys } from "./orderApi";
 import { OrderActions } from "./OrderActions";
 import { StatusBadge } from "./StatusBadge";
 import type { Payment } from "./types";
+
+// Three more ticks after the last active attempt: the relay moves the order to PAID a moment
+// after the attempt completes, and the refetch of that very tick can still see OPEN.
+const GRACE_MS = 15_000;
 
 const IN_FLIGHT = new Set(["PENDING", "AUTHORIZED", "CREATED"]);
 
@@ -49,14 +53,37 @@ export function OrderDetailPage() {
     refetchIntervalInBackground: false,
   });
 
-  // Poll only while the payer may still be paying; a settled order stops costing requests.
+  const queryClient = useQueryClient();
+  const wasInFlight = useRef(false);
+  const settledAt = useRef<number | null>(null);
+  const attemptsData = attempts.data;
+  useEffect(() => {
+    if (!attemptsData) {
+      return;
+    }
+    const inFlight = attemptsData.some((attempt) => IN_FLIGHT.has(attempt.status));
+    if (wasInFlight.current && !inFlight) {
+      settledAt.current = Date.now();
+      void queryClient.invalidateQueries({ queryKey: orderKeys.detail(id) });
+    }
+    wasInFlight.current = inFlight;
+  }, [attemptsData, id, queryClient]);
+
+  // Poll only while the payer may still be paying (or within the grace after settling); a
+  // settled order stops costing requests.
   const pollEvery = pollInterval(attempts.data ?? []);
 
   // Same cadence as the attempts: a paid attempt must turn the summary PAID without a reload.
   const order = useQuery({
     queryKey: orderKeys.detail(id),
     queryFn: () => getOrder(id),
-    refetchInterval: pollEvery,
+    refetchInterval: (query) => {
+      const inGrace = settledAt.current !== null && Date.now() - settledAt.current < GRACE_MS;
+      if (inGrace && query.state.data?.status === "OPEN") {
+        return document.visibilityState === "visible" ? 5_000 : false;
+      }
+      return pollEvery;
+    },
     refetchIntervalInBackground: false,
   });
 

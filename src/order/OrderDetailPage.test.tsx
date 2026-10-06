@@ -60,4 +60,35 @@ describe("OrderDetailPage", () => {
 
     expect(attemptCalls).toBeGreaterThanOrEqual(2);
   });
+
+  it("theOrderTurnsPaidAfterTheAttemptSettlesWithoutAReload", async () => {
+    let orderCalls = 0;
+    let attemptCalls = 0;
+    server.use(
+      http.get(BASE, () => {
+        orderCalls += 1;
+        // The relay lags: the refetch that coincides with the settled attempt still sees OPEN.
+        return HttpResponse.json(anOrder({ status: orderCalls >= 3 ? "PAID" : "OPEN" }));
+      }),
+      http.get(`${BASE}/payments`, () => {
+        attemptCalls += 1;
+        return HttpResponse.json([aPayment({ status: attemptCalls >= 2 ? "COMPLETED" : "PENDING" })]);
+      }),
+    );
+
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderPage();
+    expect(await screen.findByText("Aberta")).toBeInTheDocument();
+    expect(screen.getByText("Link de pagamento")).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_100);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5_100);
+    });
+
+    expect(await screen.findByText("Paga")).toBeInTheDocument();
+    expect(screen.queryByText("Link de pagamento")).not.toBeInTheDocument();
+  });
 });

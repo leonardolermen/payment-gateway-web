@@ -66,7 +66,8 @@ export async function invalidateOrder(queryClient: QueryClient, id: string): Pro
   ]);
 }
 
-// Idempotency keys are minted by the caller once per click, so a double click replays one action.
+// The caller mints one key per click; what stops a double click from sending twice is the dialog
+// disabling its button while pending, not the key.
 export async function cancelOrder(id: string, idempotencyKey: string): Promise<Order> {
   const { data } = await merchantRequest<Order>(`/v1/orders/${id}/cancel`, {
     method: "POST",

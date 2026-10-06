@@ -16,6 +16,16 @@ export function RefundDialog({ maxCents, pending, error, onConfirm, onCancel }: 
   const [cents, setCents] = useState<number | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
+  function switchTo(nextPartial: boolean) {
+    setPartial(nextPartial);
+    setLocalError(null);
+  }
+
+  function editAmount(next: number | null) {
+    setCents(next);
+    setLocalError(null);
+  }
+
   function handleConfirm() {
     if (!partial) {
       onConfirm(undefined);
@@ -23,7 +33,7 @@ export function RefundDialog({ maxCents, pending, error, onConfirm, onCancel }: 
     }
 
     // Checked here so a typo never costs a request (and a provider-side refusal).
-    if (cents === null || cents > maxCents) {
+    if (cents === null || cents <= 0 || cents > maxCents) {
       setLocalError(`Informe um valor de até ${formatBrl(maxCents)}.`);
       return;
     }
@@ -46,7 +56,7 @@ export function RefundDialog({ maxCents, pending, error, onConfirm, onCancel }: 
           type="radio"
           name="refund-kind"
           checked={!partial}
-          onChange={() => setPartial(false)}
+          onChange={() => switchTo(false)}
         />{" "}
         Total ({formatBrl(maxCents)})
       </label>
@@ -55,11 +65,11 @@ export function RefundDialog({ maxCents, pending, error, onConfirm, onCancel }: 
           type="radio"
           name="refund-kind"
           checked={partial}
-          onChange={() => setPartial(true)}
+          onChange={() => switchTo(true)}
         />{" "}
         Parcial
       </label>
-      {partial && <MoneyInput valueCents={cents} onChange={setCents} />}
+      {partial && <MoneyInput valueCents={cents} onChange={editAmount} />}
     </ConfirmDialog>
   );
 }
