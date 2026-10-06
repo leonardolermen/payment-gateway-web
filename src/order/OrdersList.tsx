@@ -1,20 +1,19 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Link } from "react-router";
+import { Link, useMatch, useNavigate } from "react-router";
 import { formatDateTime } from "../support/dates";
 import { formatBrl } from "../support/money";
 import { Button } from "../support/ui/Button";
-import { buttonClasses } from "../support/ui/buttonClasses";
 import { Card } from "../support/ui/Card";
 import { PageHeader } from "../support/ui/PageHeader";
 import { Table } from "../support/ui/Table";
-import { METHOD_LABELS } from "./methodLabels";
 import { listOrders, orderKeys, PAGE_SIZE } from "./orderApi";
 import { payerLabel } from "./payerLabel";
 import { StatusBadge } from "./StatusBadge";
-import type { Order, OrderStatus } from "./types";
+import type { OrderStatus } from "./types";
 
-const HEADERS = ["Criado em", "Cliente/Pagador", "Descrição", "Valor", "Status", "Método"];
+// The mockup's four columns: description and method are one click away, in the detail.
+const HEADERS = ["Criado", "Cliente", "Valor", "Status"];
 
 const FILTERS: { label: string; value: OrderStatus | "" }[] = [
   { label: "Todas", value: "" },
@@ -24,14 +23,11 @@ const FILTERS: { label: string; value: OrderStatus | "" }[] = [
   { label: "Expiradas", value: "EXPIRED" },
 ];
 
-// The method of the attempt that settled the order, else the latest attempt, else nothing.
-function methodLabel(order: Order): string {
-  const paid = order.payments.find((attempt) => attempt.id === order.paid_payment_id);
-  const attempt = paid ?? order.payments.at(-1);
-  return attempt ? METHOD_LABELS[attempt.method] : "—";
-}
+type Props = { onNewOrder: () => void };
 
-export function OrdersPage() {
+export function OrdersList({ onNewOrder }: Props) {
+  const selectedId = useMatch("/app/orders/:id")?.params.id;
+  const navigate = useNavigate();
   const [status, setStatus] = useState<OrderStatus | "">("");
   const filter = status || undefined;
 
@@ -48,7 +44,7 @@ export function OrdersPage() {
   const orders = query.data?.pages.flat() ?? [];
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       <PageHeader
         title="Cobranças"
         action={
@@ -68,9 +64,9 @@ export function OrdersPage() {
                 ))}
               </select>
             </label>
-            <Link to="/app/orders/new" className={buttonClasses()}>
+            <Button onClick={onNewOrder}>
               <span aria-hidden="true">+</span>Nova cobrança
-            </Link>
+            </Button>
           </div>
         }
       />
@@ -84,24 +80,29 @@ export function OrdersPage() {
       <Card className="overflow-hidden p-0">
         <Table headers={HEADERS}>
           {orders.map((order) => (
-            <tr key={order.id} className="hover:bg-surface-muted">
+            // The whole row opens the detail for the mouse; the date stays the link for the keyboard.
+            <tr
+              key={order.id}
+              data-selected={order.id === selectedId}
+              onClick={() => navigate(`/app/orders/${order.id}`)}
+              className="cursor-pointer hover:bg-surface-muted data-[selected=true]:bg-surface-muted"
+            >
               <td className="whitespace-nowrap">
                 <Link
                   to={`/app/orders/${order.id}`}
+                  aria-current={order.id === selectedId ? "true" : undefined}
                   className="font-medium text-accent underline-offset-2 hover:underline"
                 >
                   {formatDateTime(order.created_at)}
                 </Link>
               </td>
               <td>{payerLabel(order)}</td>
-              <td>{order.description ?? "—"}</td>
               <td className="font-display font-bold whitespace-nowrap">
                 {formatBrl(order.amount)}
               </td>
               <td>
                 <StatusBadge status={order.status} />
               </td>
-              <td>{methodLabel(order)}</td>
             </tr>
           ))}
         </Table>

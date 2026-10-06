@@ -1,28 +1,39 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { storeApiKey } from "../auth/apiKey";
 import { server } from "../test/msw/server";
 import { anOrder } from "../test/fixtures/orders";
 import { renderWithProviders } from "../test/render";
-import { OrdersPage } from "./OrdersPage";
+import { OrdersList } from "./OrdersList";
 import type { Order } from "./types";
 
 const ORDERS_URL = "http://localhost:8080/v1/orders";
 
-function renderPage() {
+function renderPage(onNewOrder = () => {}) {
   storeApiKey("gk_test_abc");
-  return renderWithProviders([{ path: "/app/orders", element: <OrdersPage /> }], {
-    initialEntries: ["/app/orders"],
-  });
+  return renderWithProviders(
+    [
+      { path: "/app/orders", element: <OrdersList onNewOrder={onNewOrder} /> },
+      { path: "/app/orders/:id", element: <OrdersList onNewOrder={onNewOrder} /> },
+    ],
+    { initialEntries: ["/app/orders"] },
+  );
 }
 
-describe("OrdersPage", () => {
-  it("rendersOrdersNewestFirstWithFormattedMoney", async () => {
+describe("OrdersList", () => {
+  it("rendersOrdersNewestFirstWithTheCustomerName", async () => {
     const orders = [
-      anOrder({ id: "ord_new", amount: 4990, status: "PAID", description: "Mais nova" }),
-      anOrder({ id: "ord_old", amount: 1000, status: "OPEN", description: "Mais antiga" }),
+      anOrder({
+        id: "ord_new",
+        amount: 4990,
+        status: "PAID",
+        customer_id: "cus_1",
+        customer_name: "Ana Silva",
+      }),
+      anOrder({ id: "ord_mid", amount: 1500, status: "OPEN", customer_id: "cus_2abcdefgh" }),
+      anOrder({ id: "ord_old", amount: 1000, status: "OPEN" }),
     ];
     server.use(http.get(ORDERS_URL, () => HttpResponse.json(orders)));
 
@@ -31,9 +42,30 @@ describe("OrdersPage", () => {
     expect(await screen.findByText("R$ 49,90")).toBeInTheDocument();
     expect(screen.getByText("Paga")).toBeInTheDocument();
     const rows = screen.getAllByRole("row");
-    expect(rows[1]).toHaveTextContent("Mais nova");
-    expect(rows[2]).toHaveTextContent("Mais antiga");
-    expect(screen.getAllByText("pagador avulso")).toHaveLength(2);
+    expect(rows[1]).toHaveTextContent("Ana Silva");
+    // A deleted customer: the order keeps the id, the name is gone.
+    expect(rows[2]).toHaveTextContent("cus_2abc…");
+    expect(rows[3]).toHaveTextContent("pagador avulso");
+  });
+
+  it("aClickOnARowOpensTheOrderAndMarksIt", async () => {
+    server.use(http.get(ORDERS_URL, () => HttpResponse.json([anOrder({ id: "ord_a" })])));
+    const { router } = renderPage();
+
+    await userEvent.click(await screen.findByText("R$ 49,90"));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe("/app/orders/ord_a"));
+    expect(screen.getAllByRole("row")[1]).toHaveAttribute("data-selected", "true");
+  });
+
+  it("newOrderAsksTheWorkspaceForTheForm", async () => {
+    const onNewOrder = vi.fn();
+    server.use(http.get(ORDERS_URL, () => HttpResponse.json([])));
+    renderPage(onNewOrder);
+
+    await userEvent.click(screen.getByRole("button", { name: /Nova cobrança/ }));
+
+    expect(onNewOrder).toHaveBeenCalledOnce();
   });
 
   it("loadMoreRequestsTheNextCursor", async () => {
@@ -71,7 +103,7 @@ describe("OrdersPage", () => {
   });
 });
 
-describe("OrdersPage matches the approved mockup", () => {
+describe("OrdersList matches the approved mockup", () => {
   it("putsTitleFilterAndCreateOnOneRowAndTheTableInAnUnpaddedCard", async () => {
     server.use(
       http.get(ORDERS_URL, () =>
@@ -88,7 +120,7 @@ describe("OrdersPage matches the approved mockup", () => {
     const title = screen.getByRole("heading", { name: "Cobranças" });
     expect(title).toHaveClass("font-display", "text-[22px]");
     const titleRow = title.parentElement as HTMLElement;
-    expect(titleRow).toContainElement(screen.getByRole("link", { name: /Nova cobrança/ }));
+    expect(titleRow).toContainElement(screen.getByRole("button", { name: /Nova cobrança/ }));
     expect(titleRow).toContainElement(screen.getByLabelText("Status"));
 
     expect(await screen.findByText("Paga")).toHaveClass("bg-ok-bg");

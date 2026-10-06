@@ -5,13 +5,13 @@ import { storeApiKey } from "../auth/apiKey";
 import { server } from "../test/msw/server";
 import { anOrder, aPayment } from "../test/fixtures/orders";
 import { renderWithProviders } from "../test/render";
-import { OrderDetailPage } from "./OrderDetailPage";
+import { OrderDetailPanel } from "./OrderDetailPanel";
 
 const BASE = "http://localhost:8080/v1/orders/ord_00000001";
 
 function renderPage() {
   storeApiKey("gk_test_abc");
-  return renderWithProviders([{ path: "/app/orders/:id", element: <OrderDetailPage /> }], {
+  return renderWithProviders([{ path: "/app/orders/:id", element: <OrderDetailPanel /> }], {
     initialEntries: ["/app/orders/ord_00000001"],
   });
 }
@@ -20,7 +20,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("OrderDetailPage", () => {
+describe("OrderDetailPanel", () => {
   it("showsTheOrderAndItsAttempts", async () => {
     server.use(
       http.get(BASE, () => HttpResponse.json(anOrder({ reference: "PED-9" }))),
@@ -95,8 +95,8 @@ describe("OrderDetailPage", () => {
   });
 });
 
-describe("OrderDetailPage matches the approved mockup", () => {
-  it("laysOutSummaryLinkAndActionsLeftAndAttemptsRight", async () => {
+describe("OrderDetailPanel matches the approved mockup", () => {
+  it("stacksTheOrderCardAboveTheAttemptsCard", async () => {
     server.use(
       http.get(BASE, () => HttpResponse.json(anOrder())),
       http.get(`${BASE}/payments`, () => HttpResponse.json([aPayment({ status: "PENDING" })])),
@@ -108,8 +108,12 @@ describe("OrderDetailPage matches the approved mockup", () => {
     expect(amount).toHaveClass("font-display", "text-[22px]");
     expect(amount?.parentElement).toContainElement(screen.getByText("Aberta"));
 
-    const grid = amount?.closest(".grid");
-    expect(grid).toHaveClass("lg:grid-cols-[1.1fr_0.9fr]");
+    // The workspace's right column: order card first, attempts card under it.
+    const orderCard = amount?.closest(".rounded-card");
+    const attemptsCard = screen
+      .getByRole("heading", { name: "Tentativas" })
+      .closest(".rounded-card");
+    expect(orderCard?.nextElementSibling).toBe(attemptsCard);
 
     expect(screen.getByText("Cliente").closest("div")).toHaveClass("border-dashed");
     expect(screen.getByRole("button", { name: "Cancelar cobrança" })).toHaveClass("text-danger");

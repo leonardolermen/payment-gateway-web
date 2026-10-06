@@ -1,12 +1,6 @@
 export type OrderStatus = "OPEN" | "PAID" | "CANCELED" | "EXPIRED";
 export type PaymentStatus =
-  | "CREATED"
-  | "PENDING"
-  | "AUTHORIZED"
-  | "COMPLETED"
-  | "FAILED"
-  | "EXPIRED"
-  | "CANCELED";
+  "CREATED" | "PENDING" | "AUTHORIZED" | "COMPLETED" | "FAILED" | "EXPIRED" | "CANCELED";
 export type PaymentMethod = "PIX" | "BOLECODE" | "CARD";
 
 // Field names mirror the API (snake_case) on purpose: a renaming layer is one more place to drift.
@@ -18,6 +12,8 @@ export type Order = {
   reference: string | null;
   description: string | null;
   customer_id: string | null;
+  // Null without a customer, or once the customer was deleted.
+  customer_name: string | null;
   paid_payment_id: string | null;
   paid_at: string | null;
   expires_at: string | null;
@@ -40,7 +36,12 @@ export type Payment = {
   reference: string | null;
   order_id: string | null;
   description: string | null;
-  pix: { txid: string; copia_e_cola: string; location: string; end_to_end_id: string | null } | null;
+  pix: {
+    txid: string;
+    copia_e_cola: string;
+    location: string;
+    end_to_end_id: string | null;
+  } | null;
   boleto: {
     linha_digitavel: string;
     codigo_barras: string;

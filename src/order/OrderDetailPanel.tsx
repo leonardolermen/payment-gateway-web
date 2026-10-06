@@ -2,7 +2,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
 import { Card } from "../support/ui/Card";
-import { PageHeader } from "../support/ui/PageHeader";
 import { AttemptsTable } from "./AttemptsTable";
 import { CheckoutLinkPanel } from "./CheckoutLinkPanel";
 import { getOrder, listAttempts, orderKeys } from "./orderApi";
@@ -21,9 +20,14 @@ function pollInterval(attempts: Payment[]): number | false {
   return inFlight && document.visibilityState === "visible" ? 5_000 : false;
 }
 
-export function OrderDetailPage() {
+// Keyed by id: moving from one order to the next in the list must not carry the previous one's
+// link, polling state or open dialog along.
+export function OrderDetailPanel() {
   const { id = "" } = useParams();
+  return <OrderDetail key={id} id={id} />;
+}
 
+function OrderDetail({ id }: { id: string }) {
   const location = useLocation();
   const navigate = useNavigate();
   // Read once into state, then wiped from history: the link is shown only right after creation,
@@ -91,24 +95,20 @@ export function OrderDetailPage() {
 
   const data = order.data;
 
+  // The workspace's right column, as in the mockup: the order on top, its attempts below.
   return (
-    <section className="space-y-6">
-      <PageHeader title={`Cobrança ${data.id}`} />
+    <section aria-label={`Cobrança ${data.id}`} className="space-y-4">
+      <Card className="min-w-0 space-y-5">
+        <OrderSummary order={data} />
+        <CheckoutLinkPanel order={data} initialUrl={initialUrl}>
+          <OrderActions order={data} attempts={attempts.data ?? []} />
+        </CheckoutLinkPanel>
+      </Card>
 
-      {/* Two columns only from 1024px, weighted like the mockup: the order is the main read. */}
-      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-        <Card className="min-w-0 space-y-5">
-          <OrderSummary order={data} />
-          <CheckoutLinkPanel order={data} initialUrl={initialUrl}>
-            <OrderActions order={data} attempts={attempts.data ?? []} />
-          </CheckoutLinkPanel>
-        </Card>
-
-        <Card className="min-w-0">
-          <h2 className="mb-2 font-display text-sm font-semibold">Tentativas</h2>
-          <AttemptsTable attempts={attempts.data ?? []} />
-        </Card>
-      </div>
+      <Card className="min-w-0">
+        <h2 className="mb-2 font-display text-sm font-semibold">Tentativas</h2>
+        <AttemptsTable attempts={attempts.data ?? []} />
+      </Card>
     </section>
   );
 }

@@ -25,8 +25,7 @@ export function OrderSummary({ order }: { order: Order }) {
       <dl className="text-sm">
         <Entry label="Cliente">{payerLabel(order)}</Entry>
         <Entry label="Descrição">{order.description ?? "—"}</Entry>
-        <Entry label="Referência">{order.reference ?? "—"}</Entry>
-        <Entry label="Criado em">{formatDateTime(order.created_at)}</Entry>
+        {order.reference && <Entry label="Referência">{order.reference}</Entry>}
         <Entry label="Vence">{order.expires_at ? formatDateTime(order.expires_at) : "—"}</Entry>
       </dl>
     </div>

@@ -9,6 +9,7 @@ export function anOrder(overrides: Partial<Order> = {}): Order {
     reference: null,
     description: "Plano mensal",
     customer_id: null,
+    customer_name: null,
     paid_payment_id: null,
     paid_at: null,
     expires_at: "2026-10-10T15:00:00Z",
