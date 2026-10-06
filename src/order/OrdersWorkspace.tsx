@@ -37,7 +37,8 @@ export function OrdersWorkspace() {
 
 export function NoOrderSelected() {
   return (
-    <Card className="text-sm text-muted">
+    // Only beside the list: on a phone it would sit alone under the form.
+    <Card className="hidden text-sm text-muted lg:block">
       Escolha uma cobrança na lista para ver o link, as tentativas e as ações.
     </Card>
   );

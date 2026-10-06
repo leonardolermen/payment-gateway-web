@@ -85,7 +85,7 @@ export function OrdersList({ onNewOrder }: Props) {
               key={order.id}
               data-selected={order.id === selectedId}
               onClick={() => navigate(`/app/orders/${order.id}`)}
-              className="cursor-pointer hover:bg-surface-muted data-[selected=true]:bg-surface-muted"
+              className="cursor-pointer hover:bg-surface-muted data-[selected=true]:bg-surface-muted data-[selected=true]:shadow-[inset_3px_0_0_var(--color-accent)]"
             >
               <td className="whitespace-nowrap">
                 <Link
