@@ -51,6 +51,8 @@ describe("NewOrderPage", () => {
 
     expect(keys[0]).toBeTruthy();
     expect(keys[1]).toBe(keys[0]);
+    expect(bodies[0]).toHaveProperty("customer");
+    expect(bodies[0]).not.toHaveProperty("customer_id");
     expect(bodies[0]).toMatchObject({
       amount: 4990,
       currency: "BRL",
@@ -71,6 +73,23 @@ describe("NewOrderPage", () => {
     await userEvent.click(screen.getByRole("button", { name: "Criar cobrança" }));
 
     expect(await screen.findByText("Informe um valor válido.")).toBeInTheDocument();
+    expect(requests).toBe(0);
+  });
+
+  it("refusesASubmitWithoutACustomer", async () => {
+    let requests = 0;
+    server.use(
+      http.post(ORDERS, () => {
+        requests += 1;
+        return HttpResponse.json(anOrder(), { status: 201 });
+      }),
+    );
+    renderPage();
+
+    await userEvent.type(screen.getByLabelText("Valor"), "49,90");
+    await userEvent.click(screen.getByRole("button", { name: "Criar cobrança" }));
+
+    expect(await screen.findByText("Escolha ou informe um cliente.")).toBeInTheDocument();
     expect(requests).toBe(0);
   });
 

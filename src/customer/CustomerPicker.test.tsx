@@ -40,6 +40,23 @@ describe("CustomerPicker", () => {
     expect(onChange).toHaveBeenLastCalledWith({ customer_id: "cus_00000001" });
   });
 
+  it("sendsTheDocumentAsDigitsOnly", async () => {
+    let requestedDocument: string | null = null;
+    server.use(
+      http.get("http://localhost:8080/v1/customers", ({ request }) => {
+        requestedDocument = new URL(request.url).searchParams.get("document");
+        return HttpResponse.json([]);
+      }),
+    );
+    renderPicker(vi.fn());
+
+    await userEvent.type(screen.getByLabelText("Documento do cliente"), "529.982.247-25");
+    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
+
+    await screen.findByText("Nenhum cliente com este documento.");
+    expect(requestedDocument).toBe("52998224725");
+  });
+
   it("saysWhenNobodyHasThatDocument", async () => {
     server.use(http.get("http://localhost:8080/v1/customers", () => HttpResponse.json([])));
     renderPicker(vi.fn());

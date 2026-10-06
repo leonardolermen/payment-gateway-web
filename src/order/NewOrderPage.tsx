@@ -23,6 +23,7 @@ export function NewOrderPage() {
   const [expiresLocal, setExpiresLocal] = useState("");
   const [customer, setCustomer] = useState<CustomerChoice | null>(null);
   const [amountError, setAmountError] = useState(false);
+  const [customerError, setCustomerError] = useState(false);
 
   const create = useMutation({
     mutationFn: (body: Parameters<typeof createOrder>[0]) => createOrder(body, idempotencyKey.current),
@@ -36,11 +37,13 @@ export function NewOrderPage() {
   function submit(event: FormEvent) {
     event.preventDefault();
 
-    if (amount === null) {
-      setAmountError(true);
+    setAmountError(amount === null);
+    setCustomerError(customer === null);
+
+    // The gateway wants exactly one of customer_id or inline customer and answers 400 otherwise.
+    if (amount === null || customer === null) {
       return;
     }
-    setAmountError(false);
 
     const expiresAt = saoPauloLocalToIso(expiresLocal);
 
@@ -80,6 +83,8 @@ export function NewOrderPage() {
         />
 
         <CustomerPicker value={customer} onChange={setCustomer} />
+
+        {customerError && <p className="text-sm text-red-700">Escolha ou informe um cliente.</p>}
 
         {create.isError && <p role="alert">{messageFor(create.error)}</p>}
 

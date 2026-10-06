@@ -3,6 +3,7 @@ import { useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router";
 import { GatewayRequestError, messageFor } from "../support/gatewayError";
 import { createCustomer, customerKeys } from "./customerApi";
+import { onlyDigits } from "./document";
 import { TextField } from "./TextField";
 import type { NewCustomer } from "./types";
 
@@ -37,7 +38,7 @@ function toBody(fields: Fields): NewCustomer {
 
   return {
     name: fields.name.trim(),
-    document: fields.document,
+    document: onlyDigits(fields.document),
     ...(fields.email.trim() !== "" && { email: fields.email.trim() }),
     ...(hasAddress && { address: { street, district, city, state, zip } }),
   };

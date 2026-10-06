@@ -43,7 +43,7 @@ export type NewOrder = {
   reference?: string;
   description?: string;
   expires_at?: string;
-} & Partial<CustomerChoice>;
+} & CustomerChoice;
 
 // The caller owns the key: it is minted once per mounted form so a retry replays the same order.
 export async function createOrder(body: NewOrder, idempotencyKey: string): Promise<Order> {

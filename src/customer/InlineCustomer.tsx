@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { isCpfOrCnpjShape } from "./document";
+import { isCpfOrCnpjShape, onlyDigits } from "./document";
 import { TextField } from "./TextField";
 import type { CustomerChoice } from "./types";
 
@@ -25,7 +25,7 @@ export function InlineCustomer({ onChange }: Props) {
     onChange({
       customer: {
         name: next.name.trim(),
-        document: next.document,
+        document: onlyDigits(next.document),
         ...(email !== "" && { email }),
       },
     });

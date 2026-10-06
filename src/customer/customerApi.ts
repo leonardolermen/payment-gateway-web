@@ -1,4 +1,5 @@
 import { merchantRequest } from "../support/merchantRequest";
+import { onlyDigits } from "./document";
 import type { Customer, NewCustomer } from "./types";
 
 export const CUSTOMER_PAGE_SIZE = 20;
@@ -23,7 +24,7 @@ export async function listCustomers(params: ListParams): Promise<Customer[]> {
 
 // The API answers with a list of zero or one item.
 export async function findByDocument(document: string): Promise<Customer | null> {
-  const query = new URLSearchParams({ document });
+  const query = new URLSearchParams({ document: onlyDigits(document) });
   const { data } = await merchantRequest<Customer[]>(`/v1/customers?${query.toString()}`);
   return data[0] ?? null;
 }
