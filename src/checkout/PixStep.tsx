@@ -18,13 +18,19 @@ export function PixStep({ token, step, send }: Props) {
 
   return (
     <section>
-      <h2 className="mb-2 text-lg font-semibold">Pague com Pix</h2>
+      <h2 className="mb-4 font-display text-lg font-semibold">Pague com Pix</h2>
       <QrCode text={step.copiaECola} />
-      <p className="mt-4 break-all font-mono text-sm">{step.copiaECola}</p>
+      <p className="mt-4 mb-3 rounded-xl bg-surface-muted p-3 font-mono text-xs break-all">
+        {step.copiaECola}
+      </p>
       <CopyButton text={step.copiaECola} />
       {step.expiresAt && <Countdown until={step.expiresAt} />}
-      <p className="mt-2 text-sm text-gray-600">Aguardando o pagamento…</p>
-      {isRateLimited && <p role="status">Muitas tentativas. Aguarde um instante.</p>}
+      <p className="mt-2 text-sm text-muted">Aguardando o pagamento…</p>
+      {isRateLimited && (
+        <p role="status" className="text-sm text-warn-fg">
+          Muitas tentativas. Aguarde um instante.
+        </p>
+      )}
       <SwitchMethodButton token={token} paymentId={step.paymentId} send={send} />
     </section>
   );
@@ -40,7 +46,7 @@ function Countdown({ until }: { until: string }) {
 
   const remaining = Math.max(0, Math.floor((Date.parse(until) - now) / 1000));
   if (remaining === 0) {
-    return <p className="mt-2">Este código Pix expirou.</p>;
+    return <p className="mt-3 text-sm text-danger">Este código Pix expirou.</p>;
   }
 
   const hours = Math.floor(remaining / 3600);
@@ -48,5 +54,5 @@ function Countdown({ until }: { until: string }) {
   const seconds = String(remaining % 60).padStart(2, "0");
   const clock = hours > 0 ? `${hours}:${minutes}:${seconds}` : `${minutes}:${seconds}`;
 
-  return <p className="mt-2">Expira em {clock}</p>;
+  return <p className="mt-3 text-sm text-muted tabular-nums">Expira em {clock}</p>;
 }

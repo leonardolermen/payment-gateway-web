@@ -3,10 +3,18 @@ import { useState } from "react";
 import { Link } from "react-router";
 import { formatDateTime } from "../support/dates";
 import { formatBrl } from "../support/money";
+import { Button } from "../support/ui/Button";
+import { buttonClasses } from "../support/ui/buttonClasses";
+import { Card } from "../support/ui/Card";
+import { INPUT_CLASSES } from "../support/ui/inputClasses";
+import { PageHeader } from "../support/ui/PageHeader";
+import { Table } from "../support/ui/Table";
 import { METHOD_LABELS } from "./methodLabels";
 import { listOrders, orderKeys, PAGE_SIZE } from "./orderApi";
 import { StatusBadge } from "./StatusBadge";
 import type { Order, OrderStatus } from "./types";
+
+const HEADERS = ["Criado em", "Cliente/Pagador", "Descrição", "Valor", "Status", "Método"];
 
 const FILTERS: { label: string; value: OrderStatus | "" }[] = [
   { label: "Todas", value: "" },
@@ -46,19 +54,21 @@ export function OrdersPage() {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Cobranças</h1>
-        <Link to="/app/orders/new" className="rounded bg-black px-3 py-2 text-sm text-white">
-          Nova cobrança
-        </Link>
-      </div>
+      <PageHeader
+        title="Cobranças"
+        action={
+          <Link to="/app/orders/new" className={buttonClasses()}>
+            <span aria-hidden="true">+</span>Nova cobrança
+          </Link>
+        }
+      />
 
-      <label className="block text-sm">
+      <label className="flex items-center gap-2 text-sm text-muted">
         Status{" "}
         <select
           value={status}
           onChange={(event) => setStatus(event.target.value as OrderStatus | "")}
-          className="rounded border px-2 py-1"
+          className={`${INPUT_CLASSES} w-auto py-1.5`}
         >
           {FILTERS.map((option) => (
             <option key={option.value} value={option.value}>
@@ -68,50 +78,48 @@ export function OrdersPage() {
         </select>
       </label>
 
-      {query.isError && <p role="alert">Não foi possível carregar as cobranças.</p>}
+      {query.isError && (
+        <p role="alert" className="text-danger">
+          Não foi possível carregar as cobranças.
+        </p>
+      )}
 
-      <table className="w-full text-left text-sm">
-        <thead className="text-gray-500">
-          <tr>
-            <th className="py-2">Criado em</th>
-            <th>Cliente/Pagador</th>
-            <th>Descrição</th>
-            <th>Valor</th>
-            <th>Status</th>
-            <th>Método</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Card className="p-0 sm:p-2">
+        <Table headers={HEADERS}>
           {orders.map((order) => (
-            <tr key={order.id} className="border-t">
-              <td className="py-2">
-                <Link to={`/app/orders/${order.id}`} className="underline">
+            <tr key={order.id} className="hover:bg-surface-muted">
+              <td className="whitespace-nowrap">
+                <Link
+                  to={`/app/orders/${order.id}`}
+                  className="font-medium text-accent underline-offset-2 hover:underline"
+                >
                   {formatDateTime(order.created_at)}
                 </Link>
               </td>
               <td>{payerLabel(order)}</td>
               <td>{order.description ?? "—"}</td>
-              <td>{formatBrl(order.amount)}</td>
+              <td className="font-display whitespace-nowrap">{formatBrl(order.amount)}</td>
               <td>
                 <StatusBadge status={order.status} />
               </td>
               <td>{methodLabel(order)}</td>
             </tr>
           ))}
-        </tbody>
-      </table>
+        </Table>
+      </Card>
 
-      {query.isSuccess && orders.length === 0 && <p>Nenhuma cobrança por aqui.</p>}
+      {query.isSuccess && orders.length === 0 && (
+        <p className="text-center text-muted">Nenhuma cobrança por aqui.</p>
+      )}
 
       {query.hasNextPage && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={() => query.fetchNextPage()}
           disabled={query.isFetchingNextPage}
-          className="rounded border px-3 py-2 text-sm"
         >
           Carregar mais
-        </button>
+        </Button>
       )}
     </section>
   );

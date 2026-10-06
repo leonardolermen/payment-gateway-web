@@ -2,6 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { copyToClipboard } from "../support/copyToClipboard";
 import { messageFor } from "../support/gatewayError";
+import { Button } from "../support/ui/Button";
+import { Card } from "../support/ui/Card";
 import { useIdempotencyKey } from "../support/useIdempotencyKey";
 import { invalidateOrder, rotateCheckoutToken } from "./orderApi";
 import type { Order } from "./types";
@@ -38,37 +40,34 @@ export function CheckoutLinkPanel({ order, initialUrl }: Props) {
   }
 
   return (
-    <div className="space-y-2">
-      <h2 className="font-medium">Link de pagamento</h2>
+    <Card className="space-y-3">
+      <h2 className="font-display text-lg font-semibold">Link de pagamento</h2>
 
       {url ? (
-        <div className="flex items-center gap-2">
-          <code className="break-all text-sm">{url}</code>
-          <button type="button" onClick={handleCopy} className="rounded border px-2 py-1 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <code className="min-w-0 flex-1 rounded-xl bg-surface-muted px-3 py-2 text-sm break-all">
+            {url}
+          </code>
+          <Button variant="ghost" size="sm" onClick={handleCopy}>
             Copiar
-          </button>
-          {copied && <span className="text-sm text-green-700">Copiado</span>}
+          </Button>
+          {copied && <span className="text-sm text-ok-fg">Copiado</span>}
         </div>
       ) : (
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted">
           O link só é exibido uma vez. Gere um novo para enviar ao pagador.
         </p>
       )}
 
-      <button
-        type="button"
-        disabled={rotate.isPending}
-        onClick={() => rotate.mutate()}
-        className="rounded border px-3 py-1 text-sm disabled:opacity-50"
-      >
+      <Button variant="ghost" size="sm" disabled={rotate.isPending} onClick={() => rotate.mutate()}>
         Gerar novo link
-      </button>
+      </Button>
 
       {rotate.isError && (
-        <p role="alert" className="text-sm text-red-700">
+        <p role="alert" className="text-sm text-danger">
           {messageFor(rotate.error)}
         </p>
       )}
-    </div>
+    </Card>
   );
 }

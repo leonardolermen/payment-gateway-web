@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../support/ConfirmDialog";
 import { messageFor } from "../support/gatewayError";
+import { Button } from "../support/ui/Button";
 import { useIdempotencyKey } from "../support/useIdempotencyKey";
 import { cancelOrder, invalidateOrder, listAttempts, orderKeys, refundPayment } from "./orderApi";
 import { RefundDialog } from "./RefundDialog";
@@ -88,27 +89,19 @@ export function OrderActions({ order, attempts }: Props) {
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {order.status === "OPEN" && (
-        <button
-          type="button"
-          onClick={() => setOpen("cancel")}
-          className="rounded border px-3 py-1 text-sm"
-        >
+        <Button variant="ghost" onClick={() => setOpen("cancel")}>
           Cancelar cobrança
-        </button>
+        </Button>
       )}
 
-      {locked && <span className="text-sm text-gray-600">Reembolso em processamento</span>}
+      {locked && <span className="text-sm text-muted">Reembolso em processamento</span>}
 
       {completed && refundable > 0 && !locked && (
-        <button
-          type="button"
-          onClick={() => setOpen("refund")}
-          className="rounded border px-3 py-1 text-sm"
-        >
+        <Button variant="ghost" onClick={() => setOpen("refund")}>
           Reembolsar
-        </button>
+        </Button>
       )}
 
       {open === "cancel" && (

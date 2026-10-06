@@ -28,12 +28,16 @@ export function SwitchMethodButton({ token, paymentId, send }: Props) {
       <button
         type="button"
         disabled={isCancelling}
-        className="underline"
+        className="text-sm text-muted underline underline-offset-2 hover:text-ink"
         onClick={() => void switchMethod()}
       >
         Trocar de método
       </button>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert" className="text-sm text-danger">
+          {error}
+        </p>
+      )}
     </div>
   );
 }

@@ -1,13 +1,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
-import { formatDateTime } from "../support/dates";
-import { formatBrl } from "../support/money";
+import { Card } from "../support/ui/Card";
+import { PageHeader } from "../support/ui/PageHeader";
 import { AttemptsTable } from "./AttemptsTable";
 import { CheckoutLinkPanel } from "./CheckoutLinkPanel";
 import { getOrder, listAttempts, orderKeys } from "./orderApi";
 import { OrderActions } from "./OrderActions";
-import { StatusBadge } from "./StatusBadge";
+import { OrderSummary } from "./OrderSummary";
 import type { Payment } from "./types";
 
 // Three more ticks after the last active attempt: the relay moves the order to PAID a moment
@@ -19,15 +19,6 @@ const IN_FLIGHT = new Set(["PENDING", "AUTHORIZED", "CREATED"]);
 function pollInterval(attempts: Payment[]): number | false {
   const inFlight = attempts.some((attempt) => IN_FLIGHT.has(attempt.status));
   return inFlight && document.visibilityState === "visible" ? 5_000 : false;
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <dt className="text-xs text-gray-500">{label}</dt>
-      <dd>{children}</dd>
-    </div>
-  );
 }
 
 export function OrderDetailPage() {
@@ -88,35 +79,34 @@ export function OrderDetailPage() {
   });
 
   if (order.isError) {
-    return <p role="alert">Não foi possível carregar a cobrança.</p>;
+    return (
+      <p role="alert" className="text-danger">
+        Não foi possível carregar a cobrança.
+      </p>
+    );
   }
   if (!order.data) {
-    return <p>Carregando…</p>;
+    return <p className="text-muted">Carregando…</p>;
   }
 
   const data = order.data;
 
   return (
     <section className="space-y-6">
-      <h1 className="text-xl font-semibold">Cobrança {data.id}</h1>
+      <PageHeader title={`Cobrança ${data.id}`} />
 
-      <dl className="grid grid-cols-2 gap-4 text-sm">
-        <Field label="Valor">{formatBrl(data.amount)}</Field>
-        <Field label="Status">
-          <StatusBadge status={data.status} />
-        </Field>
-        <Field label="Descrição">{data.description ?? "—"}</Field>
-        <Field label="Referência">{data.reference ?? "—"}</Field>
-        <Field label="Criado em">{formatDateTime(data.created_at)}</Field>
-        <Field label="Vence em">{data.expires_at ? formatDateTime(data.expires_at) : "—"}</Field>
-      </dl>
+      {/* Two columns only from 1024px: narrower, the attempts table would be squeezed unreadable. */}
+      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+        <div className="min-w-0 space-y-6">
+          <OrderSummary order={data} />
+          <CheckoutLinkPanel order={data} initialUrl={initialUrl} />
+          <OrderActions order={data} attempts={attempts.data ?? []} />
+        </div>
 
-      <CheckoutLinkPanel order={data} initialUrl={initialUrl} />
-      <OrderActions order={data} attempts={attempts.data ?? []} />
-
-      <div>
-        <h2 className="mb-2 font-medium">Tentativas de pagamento</h2>
-        <AttemptsTable attempts={attempts.data ?? []} />
+        <Card className="min-w-0">
+          <h2 className="mb-3 font-display text-lg font-semibold">Tentativas de pagamento</h2>
+          <AttemptsTable attempts={attempts.data ?? []} />
+        </Card>
       </div>
     </section>
   );

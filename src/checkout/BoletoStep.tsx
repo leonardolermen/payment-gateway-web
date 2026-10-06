@@ -18,12 +18,18 @@ export function BoletoStep({ token, step, send }: Props) {
 
   return (
     <section>
-      <h2 className="mb-2 text-lg font-semibold">Pague com boleto</h2>
-      <p className="text-sm text-gray-600">Linha digitável</p>
-      <p className="break-all font-mono text-sm">{step.linhaDigitavel}</p>
+      <h2 className="mb-4 font-display text-lg font-semibold">Pague com boleto</h2>
+      <p className="text-xs tracking-wider text-muted uppercase">Linha digitável</p>
+      <p className="mt-1 mb-3 rounded-xl bg-surface-muted p-3 font-mono text-xs break-all">
+        {step.linhaDigitavel}
+      </p>
       <CopyButton text={step.linhaDigitavel} />
-      <p className="mt-2">Vencimento: {formatDate(step.dueDate)}</p>
-      {isRateLimited && <p role="status">Muitas tentativas. Aguarde um instante.</p>}
+      <p className="mt-3 text-sm text-muted">Vencimento: {formatDate(step.dueDate)}</p>
+      {isRateLimited && (
+        <p role="status" className="text-sm text-warn-fg">
+          Muitas tentativas. Aguarde um instante.
+        </p>
+      )}
       <SwitchMethodButton token={token} paymentId={step.paymentId} send={send} />
     </section>
   );

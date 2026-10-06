@@ -2,6 +2,9 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { GatewayRequestError, messageFor } from "../support/gatewayError";
+import { Button } from "../support/ui/Button";
+import { Card } from "../support/ui/Card";
+import { PageHeader } from "../support/ui/PageHeader";
 import { createCustomer, customerKeys } from "./customerApi";
 import { onlyDigits } from "./document";
 import { TextField } from "./TextField";
@@ -82,38 +85,36 @@ export function NewCustomerPage() {
   }
 
   return (
-    <section className="max-w-lg space-y-4">
-      <h1 className="text-xl font-semibold">Novo cliente</h1>
+    <section className="mx-auto max-w-lg space-y-4">
+      <PageHeader title="Novo cliente" />
 
-      <form onSubmit={submit} className="space-y-3" noValidate>
-        <TextField label="Nome" {...bind("name")} />
-        <TextField label="Documento" {...bind("document")} />
-        <TextField label="E-mail" type="email" {...bind("email")} />
+      <Card>
+        <form onSubmit={submit} className="space-y-3" noValidate>
+          <TextField label="Nome" {...bind("name")} />
+          <TextField label="Documento" {...bind("document")} />
+          <TextField label="E-mail" type="email" {...bind("email")} />
 
-        <fieldset className="space-y-3">
-          <legend className="text-sm font-medium">Endereço (opcional)</legend>
-          <TextField label="Rua" {...bind("street")} />
-          <TextField label="Bairro" {...bind("district")} />
-          <TextField label="Cidade" {...bind("city")} />
-          <TextField label="UF" maxLength={2} {...bind("state")} />
-          <TextField label="CEP" {...bind("zip")} />
-        </fieldset>
+          <fieldset className="space-y-3 border-t border-line pt-4">
+            <legend className="pr-2 text-sm font-medium text-muted">Endereço (opcional)</legend>
+            <TextField label="Rua" {...bind("street")} />
+            <TextField label="Bairro" {...bind("district")} />
+            <TextField label="Cidade" {...bind("city")} />
+            <TextField label="UF" maxLength={2} {...bind("state")} />
+            <TextField label="CEP" {...bind("zip")} />
+          </fieldset>
 
-        {create.isError && !invalidField && (
-          <p role="alert">
-            {messageFor(create.error)}{" "}
-            {typeof duplicateId === "string" && <code>{duplicateId}</code>}
-          </p>
-        )}
+          {create.isError && !invalidField && (
+            <p role="alert" className="text-sm text-danger">
+              {messageFor(create.error)}{" "}
+              {typeof duplicateId === "string" && <code>{duplicateId}</code>}
+            </p>
+          )}
 
-        <button
-          type="submit"
-          disabled={create.isPending}
-          className="rounded bg-black px-3 py-2 text-sm text-white disabled:opacity-50"
-        >
-          Salvar
-        </button>
-      </form>
+          <Button type="submit" disabled={create.isPending}>
+            Salvar
+          </Button>
+        </form>
+      </Card>
     </section>
   );
 }

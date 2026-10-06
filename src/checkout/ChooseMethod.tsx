@@ -42,21 +42,25 @@ export function ChooseMethod({ token, methods, send }: Props) {
 
   return (
     <section>
-      <h2 className="mb-2 text-lg font-semibold">Como você quer pagar?</h2>
-      <div className="flex flex-col gap-2">
+      <h2 className="mb-3 font-display text-lg font-semibold">Como você quer pagar?</h2>
+      <div className="flex flex-wrap gap-2 rounded-pill bg-surface-muted p-1">
         {methods.map((method) => (
           <button
             key={method}
             type="button"
             disabled={isCreating}
-            className="rounded border px-4 py-3 text-left"
+            className="min-w-[30%] flex-1 rounded-pill px-4 py-2.5 font-medium text-ink hover:bg-accent hover:text-on-accent disabled:opacity-50"
             onClick={() => void choose(method)}
           >
             {LABELS[method]}
           </button>
         ))}
       </div>
-      {error && <p role="alert">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-danger">
+          {error}
+        </p>
+      )}
     </section>
   );
 }

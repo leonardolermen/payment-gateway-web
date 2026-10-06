@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { copyToClipboard } from "../support/copyToClipboard";
+import { Button } from "../support/ui/Button";
 
 export function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -9,8 +10,8 @@ export function CopyButton({ text }: { text: string }) {
   }
 
   return (
-    <button type="button" className="rounded border px-3 py-1" onClick={() => void copy()}>
+    <Button size="lg" onClick={() => void copy()}>
       {copied ? "Copiado" : "Copiar"}
-    </button>
+    </Button>
   );
 }

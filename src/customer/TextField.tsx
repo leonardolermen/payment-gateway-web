@@ -1,4 +1,6 @@
 import type { ComponentProps } from "react";
+import { Field } from "../support/ui/Field";
+import { INPUT_CLASSES } from "../support/ui/inputClasses";
 
 type Props = ComponentProps<"input"> & { label: string; error?: string };
 
@@ -6,22 +8,14 @@ export function TextField({ label, error, id, ...input }: Props) {
   const inputId = id ?? `field-${label}`;
 
   return (
-    <div className="space-y-1">
-      <label htmlFor={inputId} className="block text-sm">
-        {label}
-      </label>
+    <Field label={label} htmlFor={inputId} error={error} errorId={`${inputId}-error`}>
       <input
         id={inputId}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? `${inputId}-error` : undefined}
-        className="w-full rounded border px-2 py-1"
+        className={INPUT_CLASSES}
         {...input}
       />
-      {error && (
-        <p id={`${inputId}-error`} className="text-sm text-red-700">
-          {error}
-        </p>
-      )}
-    </div>
+    </Field>
   );
 }

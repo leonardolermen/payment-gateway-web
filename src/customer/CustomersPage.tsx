@@ -1,7 +1,14 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
 import { formatDateTime } from "../support/dates";
+import { Button } from "../support/ui/Button";
+import { buttonClasses } from "../support/ui/buttonClasses";
+import { Card } from "../support/ui/Card";
+import { PageHeader } from "../support/ui/PageHeader";
+import { Table } from "../support/ui/Table";
 import { CUSTOMER_PAGE_SIZE, customerKeys, listCustomers } from "./customerApi";
+
+const HEADERS = ["Nome", "Documento", "E-mail", "Criado em"];
 
 export function CustomersPage() {
   const query = useInfiniteQuery({
@@ -15,47 +22,48 @@ export function CustomersPage() {
 
   return (
     <section className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Clientes</h1>
-        <Link to="/app/customers/new" className="rounded bg-black px-3 py-2 text-sm text-white">
-          Novo cliente
-        </Link>
-      </div>
+      <PageHeader
+        title="Clientes"
+        action={
+          <Link to="/app/customers/new" className={buttonClasses()}>
+            <span aria-hidden="true">+</span>Novo cliente
+          </Link>
+        }
+      />
 
-      {query.isError && <p role="alert">Não foi possível carregar os clientes.</p>}
+      {query.isError && (
+        <p role="alert" className="text-danger">
+          Não foi possível carregar os clientes.
+        </p>
+      )}
 
-      <table className="w-full text-left text-sm">
-        <thead className="text-gray-500">
-          <tr>
-            <th className="py-2">Nome</th>
-            <th>Documento</th>
-            <th>E-mail</th>
-            <th>Criado em</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Card className="p-0 sm:p-2">
+        <Table headers={HEADERS}>
           {customers.map((customer) => (
-            <tr key={customer.id} className="border-t">
-              <td className="py-2">{customer.name}</td>
-              <td>{customer.document}</td>
+            <tr key={customer.id} className="hover:bg-surface-muted">
+              <td className="font-medium">{customer.name}</td>
+              <td className="font-mono text-xs">{customer.document}</td>
               <td>{customer.email ?? "—"}</td>
-              <td>{formatDateTime(customer.created_at)}</td>
+              <td className="whitespace-nowrap text-muted">
+                {formatDateTime(customer.created_at)}
+              </td>
             </tr>
           ))}
-        </tbody>
-      </table>
+        </Table>
+      </Card>
 
-      {query.isSuccess && customers.length === 0 && <p>Nenhum cliente por aqui.</p>}
+      {query.isSuccess && customers.length === 0 && (
+        <p className="text-center text-muted">Nenhum cliente por aqui.</p>
+      )}
 
       {query.hasNextPage && (
-        <button
-          type="button"
+        <Button
+          variant="ghost"
           onClick={() => query.fetchNextPage()}
           disabled={query.isFetchingNextPage}
-          className="rounded border px-3 py-2 text-sm"
         >
           Carregar mais
-        </button>
+        </Button>
       )}
     </section>
   );

@@ -1,5 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { messageFor } from "../support/gatewayError";
+import { buttonClasses } from "../support/ui/buttonClasses";
+import { INPUT_CLASSES } from "../support/ui/inputClasses";
 import { brandOf, type Brand } from "./brand";
 import { createAttempt } from "./checkoutApi";
 import type { Event } from "./checkoutState";
@@ -92,8 +94,8 @@ export function CardStep({ token, declined, send }: Props) {
   const message = submitError ?? declined;
 
   return (
-    <form className="flex flex-col gap-3" onSubmit={(formEvent) => void submit(formEvent)}>
-      <label className="flex flex-col">
+    <form className="flex flex-col gap-4" onSubmit={(formEvent) => void submit(formEvent)}>
+      <label className="flex flex-col text-sm font-medium">
         Número do cartão
         <input
           inputMode="numeric"
@@ -101,21 +103,29 @@ export function CardStep({ token, declined, send }: Props) {
           value={groupInFours(number)}
           onChange={(change) => setNumber(digitsOf(change.target.value, 19))}
           onBlur={checkNumber}
-          className="rounded border px-2 py-1"
+          className={`${INPUT_CLASSES} mt-1`}
         />
       </label>
-      {brand && <span aria-label="Bandeira">{BRAND_LABELS[brand]}</span>}
-      {numberError && <p role="alert">{numberError}</p>}
-      <label className="flex flex-col">
+      {brand && (
+        <span aria-label="Bandeira" className="text-sm text-muted">
+          {BRAND_LABELS[brand]}
+        </span>
+      )}
+      {numberError && (
+        <p role="alert" className="text-sm text-danger">
+          {numberError}
+        </p>
+      )}
+      <label className="flex flex-col text-sm font-medium">
         Nome impresso no cartão
         <input
           autoComplete="cc-name"
           value={holder}
           onChange={(change) => setHolder(change.target.value)}
-          className="rounded border px-2 py-1"
+          className={`${INPUT_CLASSES} mt-1`}
         />
       </label>
-      <label className="flex flex-col">
+      <label className="flex flex-col text-sm font-medium">
         Validade (MM/AA)
         <input
           inputMode="numeric"
@@ -123,25 +133,25 @@ export function CardStep({ token, declined, send }: Props) {
           placeholder="MM/AA"
           value={expiry}
           onChange={(change) => setExpiry(formatExpiry(change.target.value))}
-          className="rounded border px-2 py-1"
+          className={`${INPUT_CLASSES} mt-1`}
         />
       </label>
-      <label className="flex flex-col">
+      <label className="flex flex-col text-sm font-medium">
         CVV
         <input
           inputMode="numeric"
           autoComplete="cc-csc"
           value={cvv}
           onChange={(change) => setCvv(digitsOf(change.target.value, 4))}
-          className="rounded border px-2 py-1"
+          className={`${INPUT_CLASSES} mt-1`}
         />
       </label>
-      <label className="flex flex-col">
+      <label className="flex flex-col text-sm font-medium">
         Parcelas
         <select
           value={installments}
           onChange={(change) => setInstallments(Number(change.target.value))}
-          className="rounded border px-2 py-1"
+          className={`${INPUT_CLASSES} mt-1`}
         >
           {INSTALLMENTS.map((count) => (
             <option key={count} value={count}>
@@ -150,11 +160,15 @@ export function CardStep({ token, declined, send }: Props) {
           ))}
         </select>
       </label>
-      {message && <p role="alert">{message}</p>}
+      {message && (
+        <p role="alert" className="text-sm text-danger">
+          {message}
+        </p>
+      )}
       <button
         type="submit"
         disabled={isSubmitting || !/^\d{2}\/\d{2}$/.test(expiry) || !/^\d{3,4}$/.test(cvv)}
-        className="rounded bg-black px-4 py-2 text-white"
+        className={buttonClasses("primary", "lg")}
       >
         Pagar
       </button>

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useReducer } from "react";
 import { useParams } from "react-router";
 import { GatewayRequestError } from "../support/gatewayError";
 import { formatBrl } from "../support/money";
+import { ThemeToggle } from "../support/ui/ThemeToggle";
 import { BoletoStep } from "./BoletoStep";
 import { CardStep } from "./CardStep";
 import { getCheckout } from "./checkoutApi";
@@ -84,15 +85,22 @@ export function PayPage({ onStateChange }: Props) {
   }, [isReloading, refetch]);
 
   return (
-    <main className="mx-auto max-w-md p-4">
-      {data && (
-        <header className="mb-6">
-          <p className="text-sm text-gray-600">{data.merchant_name}</p>
-          <p className="text-3xl font-semibold">{formatBrl(data.amount)}</p>
-          <p className="text-gray-700">{data.description}</p>
-        </header>
-      )}
-      {renderStep(state, token, data, send, () => void refetch())}
+    <main className="min-h-screen bg-bg px-4 py-8 text-ink sm:py-16">
+      <div className="mx-auto max-w-[440px] rounded-card border border-line bg-surface p-6 shadow-sm">
+        {data && (
+          <header className="mb-6 border-b border-line pb-5">
+            <p className="text-xs font-semibold tracking-widest text-accent uppercase">
+              {data.merchant_name}
+            </p>
+            <p className="mt-2 font-display text-4xl font-semibold">{formatBrl(data.amount)}</p>
+            <p className="mt-1 text-muted">{data.description}</p>
+          </header>
+        )}
+        {renderStep(state, token, data, send, () => void refetch())}
+      </div>
+      <footer className="mx-auto mt-4 flex max-w-[440px] justify-end">
+        <ThemeToggle />
+      </footer>
     </main>
   );
 }
@@ -106,7 +114,7 @@ function renderStep(
 ) {
   switch (state.kind) {
     case "loading":
-      return <p>Carregando…</p>;
+      return <p className="text-muted">Carregando…</p>;
     case "unavailable":
       return <UnavailableScreen reason={state.reason} />;
     case "paid":
@@ -128,8 +136,8 @@ function renderStep(
     case "failed":
       return (
         <div role="alert">
-          <p>{state.message}</p>
-          <button type="button" className="mt-2 underline" onClick={retry}>
+          <p className="text-danger">{state.message}</p>
+          <button type="button" className="mt-2 text-accent underline" onClick={retry}>
             Tentar de novo
           </button>
         </div>

@@ -51,7 +51,7 @@ export function RefundDialog({ maxCents, pending, error, onConfirm, onCancel }: 
       onConfirm={handleConfirm}
       onCancel={onCancel}
     >
-      <label className="mr-4 text-sm">
+      <label className="mr-4 text-sm [&_input]:accent-accent">
         <input
           type="radio"
           name="refund-kind"
@@ -60,7 +60,7 @@ export function RefundDialog({ maxCents, pending, error, onConfirm, onCancel }: 
         />{" "}
         Total ({formatBrl(maxCents)})
       </label>
-      <label className="text-sm">
+      <label className="text-sm [&_input]:accent-accent">
         <input
           type="radio"
           name="refund-kind"

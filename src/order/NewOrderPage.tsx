@@ -6,6 +6,9 @@ import type { CustomerChoice } from "../customer/types";
 import { TextField } from "../customer/TextField";
 import { saoPauloLocalToIso } from "../support/dates";
 import { messageFor } from "../support/gatewayError";
+import { Button } from "../support/ui/Button";
+import { Card } from "../support/ui/Card";
+import { PageHeader } from "../support/ui/PageHeader";
 import { MoneyInput } from "./MoneyInput";
 import { createOrder, orderKeys } from "./orderApi";
 
@@ -58,44 +61,46 @@ export function NewOrderPage() {
   }
 
   return (
-    <section className="max-w-lg space-y-4">
-      <h1 className="text-xl font-semibold">Nova cobrança</h1>
+    <section className="mx-auto max-w-lg space-y-4">
+      <PageHeader title="Nova cobrança" />
 
-      <form onSubmit={submit} className="space-y-4" noValidate>
-        <MoneyInput valueCents={amount} onChange={setAmount} />
-        {amountError && <p className="text-sm text-red-700">Informe um valor válido.</p>}
+      <Card>
+        <form onSubmit={submit} className="space-y-4" noValidate>
+          <MoneyInput valueCents={amount} onChange={setAmount} />
+          {amountError && <p className="text-sm text-danger">Informe um valor válido.</p>}
 
-        <TextField
-          label="Descrição"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-        />
-        <TextField
-          label="Referência"
-          value={reference}
-          onChange={(event) => setReference(event.target.value)}
-        />
-        <TextField
-          label="Vencimento"
-          type="datetime-local"
-          value={expiresLocal}
-          onChange={(event) => setExpiresLocal(event.target.value)}
-        />
+          <TextField
+            label="Descrição"
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+          <TextField
+            label="Referência"
+            value={reference}
+            onChange={(event) => setReference(event.target.value)}
+          />
+          <TextField
+            label="Vencimento"
+            type="datetime-local"
+            value={expiresLocal}
+            onChange={(event) => setExpiresLocal(event.target.value)}
+          />
 
-        <CustomerPicker value={customer} onChange={setCustomer} />
+          <CustomerPicker value={customer} onChange={setCustomer} />
 
-        {customerError && <p className="text-sm text-red-700">Escolha ou informe um cliente.</p>}
+          {customerError && <p className="text-sm text-danger">Escolha ou informe um cliente.</p>}
 
-        {create.isError && <p role="alert">{messageFor(create.error)}</p>}
+          {create.isError && (
+            <p role="alert" className="text-sm text-danger">
+              {messageFor(create.error)}
+            </p>
+          )}
 
-        <button
-          type="submit"
-          disabled={create.isPending}
-          className="rounded bg-black px-3 py-2 text-sm text-white disabled:opacity-50"
-        >
-          Criar cobrança
-        </button>
-      </form>
+          <Button type="submit" disabled={create.isPending}>
+            Criar cobrança
+          </Button>
+        </form>
+      </Card>
     </section>
   );
 }

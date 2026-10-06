@@ -12,5 +12,11 @@ export function QrCode({ text }: { text: string }) {
     }
   }, [text]);
 
-  return <canvas ref={canvasRef} aria-label="QR Code Pix" className="mx-auto" />;
+  // White frame in both themes: phone readers need light quiet zone around dark modules, and a
+  // dark-theme surface behind the canvas made them fail to lock on.
+  return (
+    <div className="mx-auto w-fit rounded-xl bg-white p-2">
+      <canvas ref={canvasRef} aria-label="QR Code Pix" className="block max-w-full" />
+    </div>
+  );
 }

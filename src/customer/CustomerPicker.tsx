@@ -1,6 +1,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { messageFor } from "../support/gatewayError";
+import { Button } from "../support/ui/Button";
 import { findByDocument } from "./customerApi";
 import { isCpfOrCnpjShape } from "./document";
 import { InlineCustomer } from "./InlineCustomer";
@@ -23,30 +24,34 @@ function ExistingCustomer({ value, onChange }: Props) {
         value={document}
         onChange={(event) => setDocument(event.target.value)}
       />
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => search.mutate(document)}
         disabled={!isCpfOrCnpjShape(document) || search.isPending}
-        className="rounded border px-3 py-1 text-sm"
       >
         Buscar
-      </button>
+      </Button>
 
-      {search.isError && <p role="alert">{messageFor(search.error)}</p>}
-      {found === null && <p>Nenhum cliente com este documento.</p>}
+      {search.isError && (
+        <p role="alert" className="text-sm text-danger">
+          {messageFor(search.error)}
+        </p>
+      )}
+      {found === null && <p className="text-sm text-muted">Nenhum cliente com este documento.</p>}
       {found && (
-        <div className="flex items-center gap-3 text-sm">
-          <span>{found.name}</span>
-          <span>{found.document}</span>
-          <button
-            type="button"
+        <div className="flex flex-wrap items-center gap-3 rounded-xl bg-surface-muted p-3 text-sm">
+          <span className="font-medium">{found.name}</span>
+          <span className="font-mono text-xs text-muted">{found.document}</span>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => onChange({ customer_id: found.id })}
             disabled={selected}
-            className="rounded border px-2 py-1"
           >
             Selecionar
-          </button>
-          {selected && <span>Selecionado</span>}
+          </Button>
+          {selected && <span className="text-ok-fg">Selecionado</span>}
         </div>
       )}
     </div>
@@ -63,9 +68,9 @@ export function CustomerPicker({ value, onChange }: Props) {
   }
 
   return (
-    <fieldset className="space-y-3">
-      <legend className="text-sm font-medium">Cliente</legend>
-      <div className="flex gap-4 text-sm">
+    <fieldset className="space-y-3 border-t border-line pt-4">
+      <legend className="pr-2 text-sm font-medium text-muted">Cliente</legend>
+      <div className="flex gap-4 text-sm [&_input]:accent-accent">
         <label>
           <input
             type="radio"

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { formatBrl, parseBrl } from "../support/money";
+import { Field } from "../support/ui/Field";
+import { INPUT_CLASSES } from "../support/ui/inputClasses";
 
 type Props = { valueCents: number | null; onChange: (cents: number | null) => void };
 
@@ -30,10 +32,7 @@ export function MoneyInput({ valueCents, onChange }: Props) {
   }
 
   return (
-    <div className="space-y-1">
-      <label htmlFor="amount" className="block text-sm">
-        Valor
-      </label>
+    <Field label="Valor" htmlFor="amount" error={invalid ? "Valor inválido" : undefined}>
       <input
         id="amount"
         inputMode="decimal"
@@ -41,9 +40,8 @@ export function MoneyInput({ valueCents, onChange }: Props) {
         aria-invalid={invalid ? true : undefined}
         onChange={(event) => handleChange(event.target.value)}
         onBlur={handleBlur}
-        className="w-full rounded border px-2 py-1"
+        className={`${INPUT_CLASSES} font-display text-lg`}
       />
-      {invalid && <p className="text-sm text-red-700">Valor inválido</p>}
-    </div>
+    </Field>
   );
 }
