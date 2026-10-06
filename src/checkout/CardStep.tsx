@@ -1,8 +1,9 @@
 import { useState, type FormEvent } from "react";
-import { GatewayRequestError, messageFor } from "../support/gatewayError";
+import { messageFor } from "../support/gatewayError";
 import { brandOf, type Brand } from "./brand";
 import { createAttempt } from "./checkoutApi";
 import type { Event } from "./checkoutState";
+import { failureEvent } from "./failureEvent";
 import { isValidLuhn } from "./luhn";
 
 type Props = { token: string; declined?: string; send: (event: Event) => void };
@@ -81,15 +82,8 @@ export function CardStep({ token, declined, send }: Props) {
       send({ type: "attempt_created", payment });
     } catch (e) {
       clearCard();
-      const code = e instanceof GatewayRequestError ? e.error.code : "UNKNOWN";
-      // A 410 means the order closed under the payer; the reducer turns that code into unavailable.
-      const isGone = e instanceof GatewayRequestError && e.error.status === 410;
       setSubmitError(messageFor(e));
-      send({
-        type: "attempt_failed",
-        code: isGone ? "CHECKOUT_ORDER_CLOSED" : code,
-        message: messageFor(e),
-      });
+      send(failureEvent(e));
     } finally {
       setIsSubmitting(false);
     }

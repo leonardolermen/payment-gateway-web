@@ -3,7 +3,9 @@ import type { Checkout, CheckoutPayment, Method } from "./types";
 export type State =
   | { kind: "loading" }
   | { kind: "unavailable"; reason: "not_found" | "closed" }
-  | { kind: "paid"; paidAt: string | null }
+  // authorizedOnly: a card the merchant has yet to capture. Inferring it from a null paidAt
+  // made a PAID order (which carries no date here) read "autorizado".
+  | { kind: "paid"; paidAt: string | null; authorizedOnly: boolean }
   | { kind: "choosing"; methods: Method[] }
   | { kind: "pix"; paymentId: string; copiaECola: string; expiresAt: string | null }
   | { kind: "boleto"; paymentId: string; linhaDigitavel: string; dueDate: string }
@@ -45,7 +47,7 @@ export function reduce(state: State, event: Event, checkout: Checkout | null): S
 
 export function fromCheckout(checkout: Checkout): State {
   if (checkout.status === "PAID") {
-    return { kind: "paid", paidAt: null };
+    return { kind: "paid", paidAt: null, authorizedOnly: false };
   }
   if (checkout.status !== "OPEN") {
     return { kind: "unavailable", reason: "closed" };
@@ -60,12 +62,12 @@ function resume(payment: CheckoutPayment): State | null {
   // The order can still read OPEN right after payment while the outbox relay catches up; a payer who
   // reloads then must see "paid", not the method chooser again.
   if (payment.status === "COMPLETED") {
-    return { kind: "paid", paidAt: payment.paid_at };
+    return { kind: "paid", paidAt: payment.paid_at, authorizedOnly: false };
   }
 
   // A synchronous card attempt that is only authorized is waiting on the merchant to capture.
   if (payment.method === "CARD" && payment.status === "AUTHORIZED") {
-    return { kind: "paid", paidAt: null };
+    return { kind: "paid", paidAt: null, authorizedOnly: true };
   }
   if (payment.status !== "PENDING") {
     return null;
@@ -105,10 +107,10 @@ function fromAttempt(payment: CheckoutPayment, state: State): State {
 
 function fromCardAttempt(payment: CheckoutPayment, state: State): State {
   if (payment.status === "COMPLETED") {
-    return { kind: "paid", paidAt: payment.paid_at };
+    return { kind: "paid", paidAt: payment.paid_at, authorizedOnly: false };
   }
   if (payment.status === "AUTHORIZED") {
-    return { kind: "paid", paidAt: null };
+    return { kind: "paid", paidAt: null, authorizedOnly: true };
   }
   if (payment.status === "FAILED") {
     return { kind: "card", declined: DECLINED_MESSAGE };
@@ -131,7 +133,7 @@ function fromAttemptError(state: State, code: string): State {
 
 function fromPoll(state: State, payment: CheckoutPayment, checkout: Checkout | null): State {
   if (payment.status === "COMPLETED") {
-    return { kind: "paid", paidAt: payment.paid_at };
+    return { kind: "paid", paidAt: payment.paid_at, authorizedOnly: false };
   }
 
   const isWaiting = state.kind === "pix" || state.kind === "boleto";

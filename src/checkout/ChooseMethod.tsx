@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { GatewayRequestError, messageFor } from "../support/gatewayError";
+import { messageFor } from "../support/gatewayError";
 import { createAttempt } from "./checkoutApi";
 import type { Event } from "./checkoutState";
+import { failureEvent } from "./failureEvent";
 import type { AttemptBody, Method } from "./types";
 
 type Props = { token: string; methods: Method[]; send: (event: Event) => void };
@@ -32,9 +33,8 @@ export function ChooseMethod({ token, methods, send }: Props) {
       const payment = await createAttempt(token, body);
       send({ type: "attempt_created", payment });
     } catch (e) {
-      const code = e instanceof GatewayRequestError ? e.error.code : "UNKNOWN";
       setError(messageFor(e));
-      send({ type: "attempt_failed", code, message: messageFor(e) });
+      send(failureEvent(e));
     } finally {
       setIsCreating(false);
     }

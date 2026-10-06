@@ -1,4 +1,5 @@
 import { screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { aCheckout, CHECKOUT_URL, expectNoAuthorization } from "../test/fixtures/checkout";
@@ -31,6 +32,35 @@ describe("PayPage", () => {
     renderPage();
     expect(await screen.findByText(/Pagamento (confirmado|autorizado)/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Pix" })).not.toBeInTheDocument();
+  });
+
+  it("aPaidOrderReadsConfirmadoNotAutorizado", async () => {
+    server.use(http.get(CHECKOUT_URL, () => HttpResponse.json(aCheckout({ status: "PAID" }))));
+
+    renderPage();
+
+    expect(await screen.findByText("Pagamento confirmado")).toBeInTheDocument();
+    expect(screen.queryByText("Pagamento autorizado")).not.toBeInTheDocument();
+  });
+
+  it("aClosedOrderDuringAPixAttemptIsUnavailable", async () => {
+    server.use(
+      http.get(CHECKOUT_URL, () => HttpResponse.json(aCheckout())),
+      http.post(`${CHECKOUT_URL}/payments`, ({ request }) => {
+        expectNoAuthorization(request);
+        return HttpResponse.json(
+          { type: "urn:gateway:GONE", status: 410, detail: "closed" },
+          { status: 410 },
+        );
+      }),
+    );
+
+    renderPage();
+    await userEvent.setup().click(await screen.findByRole("button", { name: "Pix" }));
+
+    expect(
+      await screen.findByText("Este link de pagamento não está mais disponível."),
+    ).toBeInTheDocument();
   });
 
   it("anOpenOrderShowsOnlyTheAvailableMethods", async () => {

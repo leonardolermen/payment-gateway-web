@@ -9,19 +9,28 @@ type Props = { token: string; paymentId: string; send: (event: Event) => void };
 // the payer pay twice.
 export function SwitchMethodButton({ token, paymentId, send }: Props) {
   const [error, setError] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   async function switchMethod() {
+    setIsCancelling(true);
     try {
       await cancelAttempt(token, paymentId);
       send({ type: "cancelled" });
     } catch (e) {
       setError(messageFor(e));
+    } finally {
+      setIsCancelling(false);
     }
   }
 
   return (
     <div className="mt-4">
-      <button type="button" className="underline" onClick={() => void switchMethod()}>
+      <button
+        type="button"
+        disabled={isCancelling}
+        className="underline"
+        onClick={() => void switchMethod()}
+      >
         Trocar de método
       </button>
       {error && <p role="alert">{error}</p>}

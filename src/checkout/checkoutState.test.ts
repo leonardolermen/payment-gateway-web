@@ -42,7 +42,11 @@ const pix: State = { kind: "pix", paymentId: "pay_1", copiaECola: "c", expiresAt
 
 describe("fromCheckout", () => {
   it("aPaidOrderIsPaidOnLoad", () => {
-    expect(fromCheckout(aCheckout({ status: "PAID" }))).toEqual({ kind: "paid", paidAt: null });
+    expect(fromCheckout(aCheckout({ status: "PAID" }))).toEqual({
+      kind: "paid",
+      paidAt: null,
+      authorizedOnly: false,
+    });
   });
 
   it("aClosedOrderIsUnavailable", () => {
@@ -75,6 +79,7 @@ describe("fromCheckout", () => {
     expect(fromCheckout(aCheckout({ active_payment: payment }))).toEqual({
       kind: "paid",
       paidAt: null,
+      authorizedOnly: true,
     });
   });
 
@@ -91,12 +96,36 @@ describe("fromCheckout", () => {
     expect(fromCheckout(aCheckout({ active_payment: payment }))).toEqual({
       kind: "paid",
       paidAt: "2026-10-06T11:05:00Z",
+      authorizedOnly: false,
     });
   });
 
   it("aNonPendingActivePaymentFallsBackToChoosing", () => {
     const payment = aPayment({ method: "CARD", status: "FAILED", pix: null });
     expect(fromCheckout(aCheckout({ active_payment: payment })).kind).toBe("choosing");
+  });
+});
+
+describe("authorizedOnly", () => {
+  it("aPaidOrderIsConfirmedEvenWithoutADate", () => {
+    expect(fromCheckout(aCheckout({ status: "PAID" }))).toMatchObject({ authorizedOnly: false });
+  });
+
+  it("aCompletedPollIsConfirmed", () => {
+    const payment = aPayment({ status: "COMPLETED" });
+    expect(reduce(pix, { type: "polled", payment }, null)).toMatchObject({ authorizedOnly: false });
+  });
+
+  it("aCompletedAttemptIsConfirmedAndOnlyAnAuthorizedCardIsAuthorizedOnly", () => {
+    const completed = aPayment({ method: "CARD", status: "COMPLETED" });
+    const authorized = aPayment({ method: "CARD", status: "AUTHORIZED" });
+    const card: State = { kind: "card" };
+    expect(reduce(card, { type: "attempt_created", payment: completed }, null)).toMatchObject({
+      authorizedOnly: false,
+    });
+    expect(fromCheckout(aCheckout({ active_payment: authorized }))).toMatchObject({
+      authorizedOnly: true,
+    });
   });
 });
 
@@ -144,6 +173,7 @@ describe("reduce", () => {
     expect(reduce({ kind: "card" }, { type: "attempt_created", payment }, null)).toEqual({
       kind: "paid",
       paidAt: "2026-10-06T11:05:00Z",
+      authorizedOnly: false,
     });
   });
 
@@ -152,6 +182,7 @@ describe("reduce", () => {
     expect(reduce({ kind: "card" }, { type: "attempt_created", payment }, null)).toEqual({
       kind: "paid",
       paidAt: null,
+      authorizedOnly: true,
     });
   });
 
@@ -186,6 +217,7 @@ describe("reduce", () => {
     expect(reduce(pix, { type: "polled", payment }, null)).toEqual({
       kind: "paid",
       paidAt: "2026-10-06T11:10:00Z",
+      authorizedOnly: false,
     });
   });
 

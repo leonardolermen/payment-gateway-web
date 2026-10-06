@@ -35,13 +35,22 @@ function reduceAction(state: State, action: Action): State {
   return reduce(state, { type: "loaded", checkout: action.checkout }, action.checkout);
 }
 
-export function PayPage() {
+type Props = {
+  // Test-only window into the reducer: the card sweep proves no state ever carries card data.
+  onStateChange?: (state: State) => void;
+};
+
+export function PayPage({ onStateChange }: Props) {
   const { token = "" } = useParams();
   const checkout = useQuery({
     queryKey: ["checkout", token],
     queryFn: () => getCheckout(token),
   });
   const [state, dispatchAction] = useReducer(reduceAction, { kind: "loading" });
+
+  useEffect(() => {
+    onStateChange?.(state);
+  }, [state, onStateChange]);
 
   const data = checkout.data ?? null;
   const send = useCallback(
@@ -101,7 +110,13 @@ function renderStep(
     case "unavailable":
       return <UnavailableScreen reason={state.reason} />;
     case "paid":
-      return <PaidScreen amount={checkout?.amount ?? null} paidAt={state.paidAt} />;
+      return (
+        <PaidScreen
+          amount={checkout?.amount ?? null}
+          paidAt={state.paidAt}
+          authorizedOnly={state.authorizedOnly}
+        />
+      );
     case "choosing":
       return <ChooseMethod token={token} methods={state.methods} send={send} />;
     case "pix":
