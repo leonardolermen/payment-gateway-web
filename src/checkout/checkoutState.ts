@@ -57,6 +57,12 @@ export function fromCheckout(checkout: Checkout): State {
 }
 
 function resume(payment: CheckoutPayment): State | null {
+  // The order can still read OPEN right after payment while the outbox relay catches up; a payer who
+  // reloads then must see "paid", not the method chooser again.
+  if (payment.status === "COMPLETED") {
+    return { kind: "paid", paidAt: payment.paid_at };
+  }
+
   // A synchronous card attempt that is only authorized is waiting on the merchant to capture.
   if (payment.method === "CARD" && payment.status === "AUTHORIZED") {
     return { kind: "paid", paidAt: null };

@@ -86,8 +86,16 @@ describe("fromCheckout", () => {
     });
   });
 
+  it("aCompletedActivePaymentOnAnOpenOrderIsPaid", () => {
+    const payment = aPayment({ status: "COMPLETED", paid_at: "2026-10-06T11:05:00Z" });
+    expect(fromCheckout(aCheckout({ active_payment: payment }))).toEqual({
+      kind: "paid",
+      paidAt: "2026-10-06T11:05:00Z",
+    });
+  });
+
   it("aNonPendingActivePaymentFallsBackToChoosing", () => {
-    const payment = aPayment({ status: "FAILED" });
+    const payment = aPayment({ method: "CARD", status: "FAILED", pix: null });
     expect(fromCheckout(aCheckout({ active_payment: payment })).kind).toBe("choosing");
   });
 });
@@ -198,6 +206,24 @@ describe("reduce", () => {
 
   it("aPendingPollKeepsTheState", () => {
     expect(reduce(pix, { type: "polled", payment: aPayment() }, null)).toBe(pix);
+  });
+
+  it("aFailedPollFromPixOrBoletoGoesBackToChoosing", () => {
+    const boleto: State = { kind: "boleto", paymentId: "p", linhaDigitavel: "1", dueDate: "d" };
+    const payment = aPayment({ status: "FAILED" });
+    const checkout = aCheckout({ methods: ["PIX", "CARD"] });
+    const expected = { kind: "choosing", methods: ["PIX", "CARD"] };
+    expect(reduce(pix, { type: "polled", payment }, checkout)).toEqual(expected);
+    expect(reduce(boleto, { type: "polled", payment }, checkout)).toEqual(expected);
+  });
+
+  it("choosingPixWhileOnPixKeepsThePaymentId", () => {
+    expect(reduce(pix, { type: "choose", method: "PIX" }, null)).toBe(pix);
+  });
+
+  it("aPixAttemptWithoutPixDataKeepsTheState", () => {
+    const payment = aPayment({ pix: null });
+    expect(reduce(choosing, { type: "attempt_created", payment }, null)).toBe(choosing);
   });
 
   it("cancelledGoesBackToChoosing", () => {
