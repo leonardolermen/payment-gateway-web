@@ -1,1 +1,78 @@
 @import "tailwindcss";
+
+/* Raw tokens per theme (docs/superpowers/specs/2026-10-06-tema-visual.md). Light is the default
+   so a browser whose storage and matchMedia both fail still gets a readable page. */
+:root {
+  --bg: #fbf6ef;
+  --surface: #fffdf9;
+  --surface-muted: #f3e9dc;
+  --line: #eadfcf;
+  --text: #2b1d12;
+  --text-muted: #6b5744;
+  --accent: #c2410c;
+  --on-accent: #ffffff;
+  --danger: #b91c1c;
+  --ok-bg: #dcfce7;
+  --ok-fg: #166534;
+  --warn-bg: #ffedd5;
+  --warn-fg: #9a3412;
+  --neutral-bg: #f3e9dc;
+  --neutral-fg: #6b5744;
+  --font-body-face: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display-face: "Fraunces", ui-serif, Georgia, serif;
+  --radius: 14px;
+  --radius-pill-size: 999px;
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --bg: #0b0f14;
+  --surface: #121821;
+  --surface-muted: #0e141b;
+  --line: #1f2a37;
+  --text: #e6edf3;
+  --text-muted: #9fb0c3;
+  --accent: #2dd4bf;
+  --on-accent: #06211f;
+  --danger: #f87171;
+  --ok-bg: #0f3b33;
+  --ok-fg: #5eead4;
+  --warn-bg: #3b2f0f;
+  --warn-fg: #fbbf24;
+  --neutral-bg: #1a2330;
+  --neutral-fg: #8fa3b8;
+  --font-display-face: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --radius-pill-size: 12px;
+  color-scheme: dark;
+}
+
+/* "inline" keeps the var() references in the generated utilities, so switching data-theme
+   restyles everything without Tailwind knowing there are two themes. The text color is "ink"
+   because "text-text" would read as a typo. */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-line: var(--line);
+  --color-ink: var(--text);
+  --color-muted: var(--text-muted);
+  --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
+  --color-danger: var(--danger);
+  --color-ok-bg: var(--ok-bg);
+  --color-ok-fg: var(--ok-fg);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-fg: var(--warn-fg);
+  --color-neutral-bg: var(--neutral-bg);
+  --color-neutral-fg: var(--neutral-fg);
+  --font-sans: var(--font-body-face);
+  --font-display: var(--font-display-face);
+  --radius-card: var(--radius);
+  --radius-pill: var(--radius-pill-size);
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body-face);
+}
