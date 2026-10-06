@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { copyToClipboard } from "../support/copyToClipboard";
 import { messageFor } from "../support/gatewayError";
+import { useIdempotencyKey } from "../support/useIdempotencyKey";
 import { invalidateOrder, rotateCheckoutToken } from "./orderApi";
 import type { Order } from "./types";
 
@@ -12,9 +13,13 @@ export function CheckoutLinkPanel({ order, initialUrl }: Props) {
   const [url, setUrl] = useState(initialUrl);
   const [copied, setCopied] = useState(false);
 
+  const rotateKey = useIdempotencyKey();
+
+  // A second rotate under a fresh key would kill the link just issued; a retry reuses the key.
   const rotate = useMutation({
-    mutationFn: () => rotateCheckoutToken(order.id, crypto.randomUUID()),
+    mutationFn: () => rotateCheckoutToken(order.id, rotateKey.current()),
     onSuccess: async (rotated) => {
+      rotateKey.renew();
       setUrl(rotated.checkout_url);
       setCopied(false);
       await invalidateOrder(queryClient, order.id);

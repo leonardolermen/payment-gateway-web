@@ -33,10 +33,7 @@ describe("NewCustomerPage", () => {
     await submitWith("12345678909");
 
     expect(await screen.findByText("Já existe um cliente com este documento.")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ver cliente" })).toHaveAttribute(
-      "href",
-      "/app/customers/cus_00000009",
-    );
+    expect(screen.getByText("cus_00000009")).toBeInTheDocument();
   });
 
   it("aFieldErrorLandsOnItsInput", async () => {

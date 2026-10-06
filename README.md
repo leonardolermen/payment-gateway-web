@@ -47,8 +47,10 @@ A chave vai no header `Authorization: Bearer`.
 
 `vercel.json` reescreve todo caminho para `index.html` (roteamento no cliente) e define os headers de segurança.
 
-- `https://api.REPLACE-ME` no `Content-Security-Policy` é um placeholder: troque pelo host da API de
-  cada ambiente, senão o navegador bloqueia toda chamada à API.
+- O `connect-src` do CSP em `vercel.json` (padrão `http://localhost:8080`) tem de conter a origem de
+  `VITE_API_URL`, senão o navegador bloqueia toda chamada à API. A Vercel lê `vercel.json` antes do
+  build, então ele não é gerado: `scripts/write-vercel-json.mjs` roda no fim de `pnpm build` e falha
+  se a origem não bater ou se `VITE_API_URL` não estiver definida. Edite `vercel.json` por ambiente.
 - Defina `VITE_API_URL` no ambiente do build, e `GATEWAY_CORS_ORIGINS` / `GATEWAY_CHECKOUT_BASE_URL`
   no gateway com o domínio do deploy.
 

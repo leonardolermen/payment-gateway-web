@@ -29,6 +29,10 @@ export function parseBrl(input: string): number | null {
   let fraction: string;
   if (commas === 1) {
     const [left, right] = cleaned.split(",") as [string, string];
+    // Dots left of the comma must be thousands groups: "12.34,56" is a typo, not 1234,56.
+    if (!/^\d+$/.test(left) && !/^\d{1,3}(\.\d{3})+$/.test(left)) {
+      return null;
+    }
     integer = left.replace(/\./g, "");
     fraction = right;
   } else if (dots === 1 && !dotsAreThousands) {

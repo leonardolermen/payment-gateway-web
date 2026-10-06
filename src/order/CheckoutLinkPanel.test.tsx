@@ -55,3 +55,43 @@ describe("CheckoutLinkPanel", () => {
     expect(screen.queryByRole("button", { name: "Gerar novo link" })).not.toBeInTheDocument();
   });
 });
+
+describe("CheckoutLinkPanel idempotency keys", () => {
+  const ROTATE = "http://localhost:8080/v1/orders/ord_00000001/checkout-token/rotate";
+
+  it("aRetriedRotateReusesTheKey", async () => {
+    const keys: (string | null)[] = [];
+    server.use(
+      http.post(ROTATE, ({ request }) => {
+        keys.push(request.headers.get("Idempotency-Key"));
+        return keys.length === 1 ? HttpResponse.error() : HttpResponse.json(anOrder({ checkout_url: "https://pay.example/c/new" }));
+      }),
+    );
+    renderPanel(anOrder(), null);
+
+    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+    await screen.findByRole("alert");
+    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+
+    await screen.findByText("https://pay.example/c/new");
+    expect(keys[1]).toBe(keys[0]);
+  });
+
+  it("aRotateAfterSuccessGetsANewKey", async () => {
+    const keys: (string | null)[] = [];
+    server.use(
+      http.post(ROTATE, ({ request }) => {
+        keys.push(request.headers.get("Idempotency-Key"));
+        return HttpResponse.json(anOrder({ checkout_url: `https://pay.example/c/${keys.length}` }));
+      }),
+    );
+    renderPanel(anOrder(), null);
+
+    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+    await screen.findByText("https://pay.example/c/1");
+    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+
+    await screen.findByText("https://pay.example/c/2");
+    expect(keys[1]).not.toBe(keys[0]);
+  });
+});

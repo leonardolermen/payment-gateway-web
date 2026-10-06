@@ -150,3 +150,67 @@ describe("RefundDialog amount", () => {
     expect(calls).toBe(0);
   });
 });
+
+describe("OrderActions idempotency keys", () => {
+  it("aRetryAfterANetworkErrorReusesTheRefundKey", async () => {
+    const keys: (string | null)[] = [];
+    server.use(
+      http.post(`${API}/payments/pay_00000001/refunds`, ({ request }) => {
+        keys.push(request.headers.get("Idempotency-Key"));
+        return keys.length === 1 ? HttpResponse.error() : HttpResponse.json({ id: "ref_1" }, { status: 201 });
+      }),
+    );
+    renderActions(anOrder({ status: "PAID" }), [paid()]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Reembolsar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar reembolso" }));
+    await screen.findByRole("alert");
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar reembolso" }));
+
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).toBe(keys[0]);
+  });
+
+  it("aChangedAmountGetsANewKey", async () => {
+    const keys: (string | null)[] = [];
+    server.use(
+      http.post(`${API}/payments/pay_00000001/refunds`, ({ request }) => {
+        keys.push(request.headers.get("Idempotency-Key"));
+        return HttpResponse.error();
+      }),
+    );
+    renderActions(anOrder({ status: "PAID" }), [paid()]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Reembolsar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar reembolso" }));
+    await screen.findByRole("alert");
+    await userEvent.click(screen.getByRole("radio", { name: "Parcial" }));
+    await userEvent.type(screen.getByLabelText("Valor"), "10,00");
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar reembolso" }));
+
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[1]).not.toBe(keys[0]);
+  });
+
+  it("aReopenedDialogGetsANewKey", async () => {
+    const keys: (string | null)[] = [];
+    server.use(
+      http.post(`${API}/payments/pay_00000001/refunds`, ({ request }) => {
+        keys.push(request.headers.get("Idempotency-Key"));
+        return HttpResponse.error();
+      }),
+    );
+    renderActions(anOrder({ status: "PAID" }), [paid()]);
+
+    await userEvent.click(screen.getByRole("button", { name: "Reembolsar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar reembolso" }));
+    await screen.findByRole("alert");
+    await userEvent.click(screen.getByRole("button", { name: "Voltar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Reembolsar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar reembolso" }));
+
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[1]).not.toBe(keys[0]);
+  });
+});

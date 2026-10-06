@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ConfirmDialog } from "../support/ConfirmDialog";
 import { messageFor } from "../support/gatewayError";
+import { useIdempotencyKey } from "../support/useIdempotencyKey";
 import { cancelOrder, invalidateOrder, listAttempts, orderKeys, refundPayment } from "./orderApi";
 import { RefundDialog } from "./RefundDialog";
 import type { Order, Payment } from "./types";
@@ -21,9 +22,14 @@ export function OrderActions({ order, attempts }: Props) {
     ? (completed.paid_amount ?? completed.amount) - (completed.refunded_amount ?? 0)
     : 0;
 
+  const cancelKey = useIdempotencyKey();
+  const refundKey = useIdempotencyKey();
+  const refundedAmount = useRef<number | undefined>(undefined);
+
   const cancel = useMutation({
-    mutationFn: () => cancelOrder(order.id, crypto.randomUUID()),
+    mutationFn: () => cancelOrder(order.id, cancelKey.current()),
     onSuccess: async () => {
+      cancelKey.renew();
       setOpen(null);
       await invalidateOrder(queryClient, order.id);
     },
@@ -55,9 +61,16 @@ export function OrderActions({ order, attempts }: Props) {
   });
 
   const refund = useMutation({
-    mutationFn: (amount: number | undefined) =>
-      refundPayment(completed?.id ?? "", amount, crypto.randomUUID()),
+    mutationFn: (amount: number | undefined) => {
+      // A different amount is a different refund: reusing the key would replay the old one.
+      if (amount !== refundedAmount.current) {
+        refundKey.renew();
+        refundedAmount.current = amount;
+      }
+      return refundPayment(completed?.id ?? "", amount, refundKey.current());
+    },
     onSuccess: async () => {
+      refundKey.renew();
       if (completed) {
         setLock({ paymentId: completed.id, baseline: completed.refunded_amount ?? 0 });
       }
@@ -68,6 +81,8 @@ export function OrderActions({ order, attempts }: Props) {
 
   function close() {
     setOpen(null);
+    cancelKey.renew();
+    refundKey.renew();
     cancel.reset();
     refund.reset();
   }

@@ -1,6 +1,5 @@
+import { API_BASE } from "./apiBase";
 import { GatewayRequestError, NetworkError, problemToError } from "./gatewayError";
-
-const BASE = import.meta.env.VITE_API_URL as string;
 
 type Init = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
@@ -28,7 +27,7 @@ export async function request<T>(
 
   let response: Response;
   try {
-    response = await fetch(BASE + path, {
+    response = await fetch(API_BASE + path, {
       method: init.method ?? "GET",
       headers,
       body: init.body === undefined ? undefined : JSON.stringify(init.body),

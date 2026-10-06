@@ -20,7 +20,7 @@ describe("parseBrl", () => {
     expect(parseBrl(input)).toBe(cents);
   });
 
-  it.each(["", "   ", "0", "0,00", "-5", "abc", "1,2,3"])("refuses %s", (input) => {
+  it.each(["", "   ", "0", "0,00", "-5", "abc", "1,2,3", "12.34,56"])("refuses %s", (input) => {
     expect(parseBrl(input)).toBeNull();
   });
 

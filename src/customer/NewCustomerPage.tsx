@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { GatewayRequestError, messageFor } from "../support/gatewayError";
 import { createCustomer, customerKeys } from "./customerApi";
 import { onlyDigits } from "./document";
@@ -102,11 +102,7 @@ export function NewCustomerPage() {
         {create.isError && !invalidField && (
           <p role="alert">
             {messageFor(create.error)}{" "}
-            {typeof duplicateId === "string" && (
-              <Link to={`/app/customers/${duplicateId}`} className="underline">
-                Ver cliente
-              </Link>
-            )}
+            {typeof duplicateId === "string" && <code>{duplicateId}</code>}
           </p>
         )}
 
