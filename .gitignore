@@ -10,3 +10,7 @@ coverage/
 test-results/
 playwright-report/
 .superpowers/
+node_modules/
+*.tsbuildinfo
+dist-ssr
+.DS_Store
