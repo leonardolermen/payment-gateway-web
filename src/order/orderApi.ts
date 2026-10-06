@@ -1,4 +1,5 @@
 import { merchantRequest } from "../support/merchantRequest";
+import type { CustomerChoice } from "../customer/types";
 import type { Order, OrderStatus, Payment } from "./types";
 
 export const PAGE_SIZE = 20;
@@ -33,5 +34,23 @@ export async function getOrder(id: string): Promise<Order> {
 
 export async function listAttempts(id: string): Promise<Payment[]> {
   const { data } = await merchantRequest<Payment[]>(`/v1/orders/${id}/payments`);
+  return data;
+}
+
+export type NewOrder = {
+  amount: number;
+  currency: "BRL";
+  reference?: string;
+  description?: string;
+  expires_at?: string;
+} & Partial<CustomerChoice>;
+
+// The caller owns the key: it is minted once per mounted form so a retry replays the same order.
+export async function createOrder(body: NewOrder, idempotencyKey: string): Promise<Order> {
+  const { data } = await merchantRequest<Order>("/v1/orders", {
+    method: "POST",
+    body,
+    idempotencyKey,
+  });
   return data;
 }
