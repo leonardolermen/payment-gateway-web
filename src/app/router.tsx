@@ -1,6 +1,7 @@
 import { createBrowserRouter, Navigate } from "react-router";
 import { LoginPage } from "../auth/LoginPage";
 import { RequireApiKey } from "../auth/RequireApiKey";
+import { PayPage } from "../checkout/PayPage";
 import { CustomersPage } from "../customer/CustomersPage";
 import { NewCustomerPage } from "../customer/NewCustomerPage";
 import { NewOrderPage } from "../order/NewOrderPage";
@@ -8,7 +9,6 @@ import { OrderDetailPage } from "../order/OrderDetailPage";
 import { OrdersPage } from "../order/OrdersPage";
 import { AppLayout } from "./AppLayout";
 
-// Placeholders for the screens: the panel and the checkout replace these in the next tasks.
 export const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/app/orders" replace /> },
   { path: "/app/login", element: <LoginPage /> },
@@ -29,5 +29,5 @@ export const router = createBrowserRouter([
       },
     ],
   },
-  { path: "/pay/:token", element: <div>pagar</div> },
+  { path: "/pay/:token", element: <PayPage /> },
 ]);
