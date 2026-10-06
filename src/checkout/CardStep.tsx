@@ -34,6 +34,12 @@ function formatExpiry(value: string): string {
   return digits.length > 2 ? `${digits.slice(0, 2)}/${digits.slice(2)}` : digits;
 }
 
+/** The field takes the MM/AA printed on the card; the API (and the Cielo) want MM/YYYY. */
+function toApiExpiry(expiry: string): string {
+  const [month, year] = expiry.split("/");
+  return `${month}/20${year}`;
+}
+
 /**
  * Card fields live only in this component's state and the request body. They are wiped before the
  * reducer hears the response, success or failure, so nothing that outlives this render (reducer,
@@ -74,7 +80,7 @@ export function CardStep({ token, declined, send }: Props) {
     setSubmitError(null);
     const body = {
       method: "CARD" as const,
-      card: { number, holder: holder.trim(), expiry, cvv },
+      card: { number, holder: holder.trim(), expiry: toApiExpiry(expiry), cvv },
       installments,
     };
 

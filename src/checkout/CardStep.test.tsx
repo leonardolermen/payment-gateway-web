@@ -108,7 +108,7 @@ describe("CardStep", () => {
     expect(await screen.findByText("Pagamento confirmado")).toBeInTheDocument();
     expect(body).toEqual({
       method: "CARD",
-      card: { number: "4024007153763171", holder: "MARIA SILVA", expiry: "12/30", cvv: "987" },
+      card: { number: "4024007153763171", holder: "MARIA SILVA", expiry: "12/2030", cvv: "987" },
       installments: 3,
     });
   });
