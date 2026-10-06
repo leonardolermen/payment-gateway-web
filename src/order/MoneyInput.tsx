@@ -40,7 +40,7 @@ export function MoneyInput({ valueCents, onChange }: Props) {
         aria-invalid={invalid ? true : undefined}
         onChange={(event) => handleChange(event.target.value)}
         onBlur={handleBlur}
-        className={`${INPUT_CLASSES} font-display text-lg`}
+        className={`${INPUT_CLASSES} h-12 font-display text-[22px] font-bold`}
       />
     </Field>
   );

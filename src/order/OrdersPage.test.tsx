@@ -71,3 +71,33 @@ describe("OrdersPage", () => {
   });
 });
 
+describe("OrdersPage matches the approved mockup", () => {
+  it("putsTitleFilterAndCreateOnOneRowAndTheTableInAnUnpaddedCard", async () => {
+    server.use(
+      http.get(ORDERS_URL, () =>
+        HttpResponse.json([
+          anOrder({ id: "ord_a", status: "PAID" }),
+          anOrder({ id: "ord_b", status: "OPEN" }),
+          anOrder({ id: "ord_c", status: "EXPIRED" }),
+        ]),
+      ),
+    );
+
+    renderPage();
+
+    const title = screen.getByRole("heading", { name: "Cobranças" });
+    expect(title).toHaveClass("font-display", "text-[22px]");
+    const titleRow = title.parentElement as HTMLElement;
+    expect(titleRow).toContainElement(screen.getByRole("link", { name: /Nova cobrança/ }));
+    expect(titleRow).toContainElement(screen.getByLabelText("Status"));
+
+    expect(await screen.findByText("Paga")).toHaveClass("bg-ok-bg");
+    const table = screen.getByRole("table");
+    expect(table.closest(".rounded-card")).toHaveClass("p-0");
+    expect(screen.getAllByRole("columnheader")[0]).toHaveClass("text-[10px]", "uppercase");
+
+    expect(screen.getByText("Aberta")).toHaveClass("bg-warn-bg");
+    expect(screen.getByText("Expirada")).toHaveClass("bg-neutral-bg");
+    expect(screen.getAllByText("R$ 49,90")[0]).toHaveClass("font-display", "font-bold");
+  });
+});

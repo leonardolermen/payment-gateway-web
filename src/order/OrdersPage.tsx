@@ -6,11 +6,11 @@ import { formatBrl } from "../support/money";
 import { Button } from "../support/ui/Button";
 import { buttonClasses } from "../support/ui/buttonClasses";
 import { Card } from "../support/ui/Card";
-import { INPUT_CLASSES } from "../support/ui/inputClasses";
 import { PageHeader } from "../support/ui/PageHeader";
 import { Table } from "../support/ui/Table";
 import { METHOD_LABELS } from "./methodLabels";
 import { listOrders, orderKeys, PAGE_SIZE } from "./orderApi";
+import { payerLabel } from "./payerLabel";
 import { StatusBadge } from "./StatusBadge";
 import type { Order, OrderStatus } from "./types";
 
@@ -23,11 +23,6 @@ const FILTERS: { label: string; value: OrderStatus | "" }[] = [
   { label: "Canceladas", value: "CANCELED" },
   { label: "Expiradas", value: "EXPIRED" },
 ];
-
-// No payer name on the order yet: the customer id is shortened until a later task enriches it.
-function payerLabel(order: Order): string {
-  return order.customer_id ? `${order.customer_id.slice(0, 8)}…` : "pagador avulso";
-}
 
 // The method of the attempt that settled the order, else the latest attempt, else nothing.
 function methodLabel(order: Order): string {
@@ -57,26 +52,28 @@ export function OrdersPage() {
       <PageHeader
         title="Cobranças"
         action={
-          <Link to="/app/orders/new" className={buttonClasses()}>
-            <span aria-hidden="true">+</span>Nova cobrança
-          </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Not in the mockup, kept: the filter rides the title row as a quiet ghost pill. */}
+            <label className="flex items-center gap-2 rounded-pill border border-line bg-surface py-1 pr-1 pl-3 text-xs text-muted">
+              Status{" "}
+              <select
+                value={status}
+                onChange={(event) => setStatus(event.target.value as OrderStatus | "")}
+                className="rounded-pill bg-transparent py-1 pr-1 font-semibold text-ink outline-none"
+              >
+                {FILTERS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <Link to="/app/orders/new" className={buttonClasses()}>
+              <span aria-hidden="true">+</span>Nova cobrança
+            </Link>
+          </div>
         }
       />
-
-      <label className="flex items-center gap-2 text-sm text-muted">
-        Status{" "}
-        <select
-          value={status}
-          onChange={(event) => setStatus(event.target.value as OrderStatus | "")}
-          className={`${INPUT_CLASSES} w-auto py-1.5`}
-        >
-          {FILTERS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
 
       {query.isError && (
         <p role="alert" className="text-danger">
@@ -84,7 +81,7 @@ export function OrdersPage() {
         </p>
       )}
 
-      <Card className="p-0 sm:p-2">
+      <Card className="overflow-hidden p-0">
         <Table headers={HEADERS}>
           {orders.map((order) => (
             <tr key={order.id} className="hover:bg-surface-muted">
@@ -98,7 +95,9 @@ export function OrdersPage() {
               </td>
               <td>{payerLabel(order)}</td>
               <td>{order.description ?? "—"}</td>
-              <td className="font-display whitespace-nowrap">{formatBrl(order.amount)}</td>
+              <td className="font-display font-bold whitespace-nowrap">
+                {formatBrl(order.amount)}
+              </td>
               <td>
                 <StatusBadge status={order.status} />
               </td>

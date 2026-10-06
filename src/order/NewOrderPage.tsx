@@ -96,7 +96,7 @@ export function NewOrderPage() {
             </p>
           )}
 
-          <Button type="submit" disabled={create.isPending}>
+          <Button type="submit" size="lg" disabled={create.isPending}>
             Criar cobrança
           </Button>
         </form>

@@ -72,7 +72,9 @@ describe("OrderDetailPage", () => {
       }),
       http.get(`${BASE}/payments`, () => {
         attemptCalls += 1;
-        return HttpResponse.json([aPayment({ status: attemptCalls >= 2 ? "COMPLETED" : "PENDING" })]);
+        return HttpResponse.json([
+          aPayment({ status: attemptCalls >= 2 ? "COMPLETED" : "PENDING" }),
+        ]);
       }),
     );
 
@@ -90,5 +92,32 @@ describe("OrderDetailPage", () => {
 
     expect(await screen.findByText("Paga")).toBeInTheDocument();
     expect(screen.queryByText("Link de pagamento")).not.toBeInTheDocument();
+  });
+});
+
+describe("OrderDetailPage matches the approved mockup", () => {
+  it("laysOutSummaryLinkAndActionsLeftAndAttemptsRight", async () => {
+    server.use(
+      http.get(BASE, () => HttpResponse.json(anOrder())),
+      http.get(`${BASE}/payments`, () => HttpResponse.json([aPayment({ status: "PENDING" })])),
+    );
+
+    renderPage();
+
+    const [amount] = await screen.findAllByText("R$ 49,90");
+    expect(amount).toHaveClass("font-display", "text-[22px]");
+    expect(amount?.parentElement).toContainElement(screen.getByText("Aberta"));
+
+    const grid = amount?.closest(".grid");
+    expect(grid).toHaveClass("lg:grid-cols-[1.1fr_0.9fr]");
+
+    expect(screen.getByText("Cliente").closest("div")).toHaveClass("border-dashed");
+    expect(screen.getByRole("button", { name: "Cancelar cobrança" })).toHaveClass("text-danger");
+    expect(screen.getByRole("button", { name: "Gerar novo link" }).parentElement).toContainElement(
+      screen.getByRole("button", { name: "Cancelar cobrança" }),
+    );
+
+    expect(screen.getByRole("heading", { name: "Tentativas" })).toBeInTheDocument();
+    expect(await screen.findByText("Pendente")).toHaveClass("bg-warn-bg");
   });
 });

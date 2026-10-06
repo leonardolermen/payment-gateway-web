@@ -21,6 +21,7 @@ function ExistingCustomer({ value, onChange }: Props) {
     <div className="space-y-2">
       <TextField
         label="Documento do cliente"
+        placeholder="Buscar por CPF…"
         value={document}
         onChange={(event) => setDocument(event.target.value)}
       />
@@ -69,7 +70,9 @@ export function CustomerPicker({ value, onChange }: Props) {
 
   return (
     <fieldset className="space-y-3 border-t border-line pt-4">
-      <legend className="pr-2 text-sm font-medium text-muted">Cliente</legend>
+      <legend className="pr-2 text-[10px] font-medium tracking-wider text-muted uppercase">
+        Cliente
+      </legend>
       <div className="flex gap-4 text-sm [&_input]:accent-accent">
         <label>
           <input

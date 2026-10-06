@@ -3,14 +3,15 @@ import { NavLink, Outlet, useNavigate } from "react-router";
 import { clearApiKey } from "../auth/apiKey";
 import { useMerchant } from "../auth/useMerchant";
 import { Badge, type BadgeTone } from "../support/ui/Badge";
-import { Button } from "../support/ui/Button";
 import { ThemeToggle } from "../support/ui/ThemeToggle";
 
 const ENVIRONMENT_TONE: Record<"TEST" | "LIVE", BadgeTone> = { TEST: "warn", LIVE: "ok" };
 
+// The active item is marked by a bar under the text, as in the approved mockup; the bar is a
+// border so the label does not shift when it moves between items.
 function navClass({ isActive }: { isActive: boolean }): string {
-  return `rounded-pill px-3 py-1.5 text-sm font-medium ${
-    isActive ? "bg-surface-muted text-accent" : "text-muted hover:text-ink"
+  return `flex h-full items-center border-b-2 font-medium ${
+    isActive ? "border-accent text-ink" : "border-transparent text-muted hover:text-ink"
   }`;
 }
 
@@ -28,18 +29,13 @@ export function AppLayout() {
 
   return (
     <div className="min-h-screen bg-bg text-ink">
-      <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+      <header className="border-b border-line bg-surface font-chrome text-[13px]">
+        <div className="mx-auto grid h-14 max-w-6xl grid-cols-[1fr_auto_1fr] items-center gap-4 px-4">
           <div className="flex min-w-0 items-center gap-2">
-            <span aria-hidden="true" className="size-6 shrink-0 rounded-md bg-accent" />
-            <strong className="truncate font-display text-lg">{merchant.data?.name ?? "…"}</strong>
-            {merchant.data && (
-              <Badge tone={ENVIRONMENT_TONE[merchant.data.environment]}>
-                {merchant.data.environment}
-              </Badge>
-            )}
+            <span aria-hidden="true" className="size-[22px] shrink-0 rounded-[7px] bg-accent" />
+            <strong className="truncate font-bold">{merchant.data?.name ?? "…"}</strong>
           </div>
-          <nav className="flex gap-1">
+          <nav className="flex h-full gap-4">
             <NavLink to="/app/orders" className={navClass}>
               Cobranças
             </NavLink>
@@ -47,11 +43,20 @@ export function AppLayout() {
               Clientes
             </NavLink>
           </nav>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex items-center justify-end gap-2">
+            {merchant.data && (
+              <Badge tone={ENVIRONMENT_TONE[merchant.data.environment]}>
+                {merchant.data.environment}
+              </Badge>
+            )}
             <ThemeToggle />
-            <Button variant="ghost" size="sm" onClick={signOut}>
+            <button
+              type="button"
+              onClick={signOut}
+              className="rounded-pill px-2 py-1 text-xs font-semibold text-muted hover:text-accent"
+            >
               Sair
-            </Button>
+            </button>
           </div>
         </div>
       </header>

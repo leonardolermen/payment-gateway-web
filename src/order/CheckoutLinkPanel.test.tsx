@@ -95,3 +95,15 @@ describe("CheckoutLinkPanel idempotency keys", () => {
     expect(keys[1]).not.toBe(keys[0]);
   });
 });
+
+describe("CheckoutLinkPanel matches the approved mockup", () => {
+  it("showsTheLinkInAMonoBoxWithAPrimaryCopy", () => {
+    renderPanel(anOrder(), "https://pay.example/c/abc");
+
+    expect(screen.getByText("https://pay.example/c/abc")).toHaveClass(
+      "font-mono",
+      "bg-surface-muted",
+    );
+    expect(screen.getByRole("button", { name: "Copiar" })).toHaveClass("bg-accent");
+  });
+});

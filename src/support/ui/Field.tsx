@@ -14,7 +14,10 @@ type Props = {
 export function Field({ label, htmlFor, hint, error, errorId, children }: Props) {
   return (
     <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-sm font-medium text-ink">
+      <label
+        htmlFor={htmlFor}
+        className="block text-[10px] font-medium tracking-wider text-muted uppercase"
+      >
         {label}
       </label>
       {children}

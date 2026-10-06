@@ -86,4 +86,17 @@ describe("theme", () => {
     unsubscribe();
     expect(listeners).toHaveLength(0);
   });
+
+  // The accent must come from the stylesheet's [data-theme] block only: an inline --accent on
+  // <html> would outrank it and pin one theme's colour under the other.
+  it("switches themes through data-theme alone, never an inline style", () => {
+    mockSystem(false);
+    applyTheme("dark");
+    expect(document.documentElement.getAttribute("style")).toBeNull();
+
+    toggleTheme();
+    expect(document.documentElement.dataset.theme).toBe("light");
+    expect(document.documentElement.getAttribute("style")).toBeNull();
+    expect(document.documentElement.getAttributeNames().sort()).toEqual(["data-theme"]);
+  });
 });

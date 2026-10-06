@@ -91,7 +91,7 @@ export function OrderActions({ order, attempts }: Props) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       {order.status === "OPEN" && (
-        <Button variant="ghost" onClick={() => setOpen("cancel")}>
+        <Button variant="danger-ghost" size="sm" onClick={() => setOpen("cancel")}>
           Cancelar cobrança
         </Button>
       )}
@@ -99,7 +99,7 @@ export function OrderActions({ order, attempts }: Props) {
       {locked && <span className="text-sm text-muted">Reembolso em processamento</span>}
 
       {completed && refundable > 0 && !locked && (
-        <Button variant="ghost" onClick={() => setOpen("refund")}>
+        <Button variant="ghost" size="sm" onClick={() => setOpen("refund")}>
           Reembolsar
         </Button>
       )}

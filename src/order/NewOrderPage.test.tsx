@@ -110,3 +110,19 @@ describe("NewOrderPage", () => {
     expect(router.state.location.state).toEqual({ checkoutUrl: "http://pay/abc" });
   });
 });
+
+describe("NewOrderPage matches the approved mockup", () => {
+  it("usesSmallCapsLabelsTallInputsAndADisplayAmount", () => {
+    renderPage();
+
+    const amount = screen.getByLabelText("Valor");
+    expect(amount).toHaveClass("font-display", "text-[22px]", "bg-field");
+    expect(screen.getByLabelText("Descrição")).toHaveClass("h-10", "border-line");
+    expect(screen.getByText("Descrição", { selector: "label" })).toHaveClass(
+      "text-[10px]",
+      "uppercase",
+    );
+    expect(screen.getByPlaceholderText("Buscar por CPF…")).toBeInTheDocument();
+    expect(amount.closest(".rounded-card")).not.toBeNull();
+  });
+});

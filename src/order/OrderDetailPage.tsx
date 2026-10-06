@@ -95,16 +95,17 @@ export function OrderDetailPage() {
     <section className="space-y-6">
       <PageHeader title={`Cobrança ${data.id}`} />
 
-      {/* Two columns only from 1024px: narrower, the attempts table would be squeezed unreadable. */}
-      <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
-        <div className="min-w-0 space-y-6">
+      {/* Two columns only from 1024px, weighted like the mockup: the order is the main read. */}
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
+        <Card className="min-w-0 space-y-5">
           <OrderSummary order={data} />
-          <CheckoutLinkPanel order={data} initialUrl={initialUrl} />
-          <OrderActions order={data} attempts={attempts.data ?? []} />
-        </div>
+          <CheckoutLinkPanel order={data} initialUrl={initialUrl}>
+            <OrderActions order={data} attempts={attempts.data ?? []} />
+          </CheckoutLinkPanel>
+        </Card>
 
         <Card className="min-w-0">
-          <h2 className="mb-3 font-display text-lg font-semibold">Tentativas de pagamento</h2>
+          <h2 className="mb-2 font-display text-sm font-semibold">Tentativas</h2>
           <AttemptsTable attempts={attempts.data ?? []} />
         </Card>
       </div>

@@ -13,14 +13,16 @@ export function Table({ headers, children }: Props) {
             {headers.map((header) => (
               <th
                 key={header}
-                className="px-3 py-2 text-xs font-medium tracking-wider whitespace-nowrap text-muted uppercase"
+                className="px-3 py-2.5 text-[10px] font-medium tracking-wider whitespace-nowrap text-muted uppercase"
               >
                 {header}
               </th>
             ))}
           </tr>
         </thead>
-        <tbody className="divide-y divide-line [&_td]:px-3 [&_td]:py-3">{children}</tbody>
+        <tbody className="divide-y divide-line [&_td]:h-10 [&_td]:px-3 [&_td]:py-1.5">
+          {children}
+        </tbody>
       </table>
     </div>
   );
