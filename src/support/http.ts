@@ -2,7 +2,7 @@ import { API_BASE } from "./apiBase";
 import { GatewayRequestError, NetworkError, problemToError } from "./gatewayError";
 
 type Init = {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   headers?: Record<string, string>;
   apiKey?: string;

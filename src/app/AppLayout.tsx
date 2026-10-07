@@ -39,8 +39,14 @@ export function AppLayout() {
             <NavLink to="/app/orders" className={navClass}>
               Cobranças
             </NavLink>
+            <NavLink to="/app/subscriptions" className={navClass}>
+              Assinaturas
+            </NavLink>
             <NavLink to="/app/customers" className={navClass}>
               Clientes
+            </NavLink>
+            <NavLink to="/app/settings/installments" className={navClass}>
+              Parcelamento
             </NavLink>
           </nav>
           <div className="flex items-center justify-end gap-2">

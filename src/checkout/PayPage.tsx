@@ -123,7 +123,7 @@ export function PayPage({ onStateChange }: Props) {
               {data.merchant_name}
             </p>
             <p className="mt-2 font-display text-4xl font-semibold">{formatBrl(data.amount)}</p>
-            <p className="mt-1 text-muted">{data.description}</p>
+            <p className="mt-1 text-muted">{data.plan_name ?? data.description}</p>
             {data.expires_at && data.status === "OPEN" && (
               <p className="mt-1 text-xs text-muted">Vence em {formatDateTime(data.expires_at)}</p>
             )}
@@ -261,7 +261,14 @@ function renderStep(
         />
       );
     case "choosing":
-      return <ChooseMethod token={token} methods={state.methods} send={send} />;
+      return (
+        <ChooseMethod
+          token={token}
+          methods={state.methods}
+          send={send}
+          maxInstallments={checkout?.installment_options?.at(-1)?.count}
+        />
+      );
     case "pix":
       return <PixStep token={token} step={state} send={send} {...leave} />;
     case "boleto":
@@ -272,6 +279,9 @@ function renderStep(
           token={token}
           amount={checkout?.amount ?? 0}
           installmentOptions={checkout?.installment_options ?? []}
+          subscriptionPlan={
+            checkout?.saves_card_for_subscription ? (checkout.plan_name ?? null) : undefined
+          }
           declined={state.declined}
           send={send}
         />

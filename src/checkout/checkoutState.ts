@@ -7,6 +7,7 @@ export type Receipt = {
   brand: string | null;
   last4: string | null;
   installments: number | null;
+  interestAmount: number;
 };
 
 export type State =
@@ -94,6 +95,7 @@ function receiptOf(payment: CheckoutPayment): Receipt {
     brand: payment.card?.brand ?? null,
     last4: payment.card?.last4 ?? null,
     installments: payment.card?.installments ?? null,
+    interestAmount: payment.card?.interest_amount ?? 0,
   };
 }
 

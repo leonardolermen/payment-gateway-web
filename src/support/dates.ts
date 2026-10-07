@@ -8,6 +8,13 @@ export function formatDateTime(iso: string): string {
   return DATE_TIME.format(new Date(iso));
 }
 
+const DAY = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeZone: "America/Sao_Paulo" });
+
+/** The São Paulo day of an instant: a subscription's next billing is a day, not a minute. */
+export function formatDay(iso: string): string {
+  return DAY.format(new Date(iso));
+}
+
 const SAO_PAULO_WALL_CLOCK = new Intl.DateTimeFormat("en-US", {
   timeZone: "America/Sao_Paulo",
   hourCycle: "h23",

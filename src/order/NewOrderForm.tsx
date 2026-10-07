@@ -8,8 +8,16 @@ import { saoPauloLocalToIso } from "../support/dates";
 import { messageFor } from "../support/gatewayError";
 import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
+import { formatBrl } from "../support/money";
+import { NEW_PLAN, type PlanChoice } from "../subscription/planChoice";
+import { RecurringFields } from "../subscription/RecurringFields";
+import { newStepKeys, startSubscription } from "../subscription/startSubscription";
+import { subscriptionKeys } from "../subscription/subscriptionApi";
+import type { SubscriptionMethod } from "../subscription/types";
 import { MoneyInput } from "./MoneyInput";
 import { createOrder, orderKeys } from "./orderApi";
+
+type Kind = "single" | "recurring";
 
 type Props = { onCreated?: () => void };
 
@@ -30,6 +38,33 @@ export function NewOrderForm({ onCreated }: Props) {
   const [customer, setCustomer] = useState<CustomerChoice | null>(null);
   const [amountError, setAmountError] = useState(false);
   const [customerError, setCustomerError] = useState(false);
+  // Avulsa is an order; recorrente is a subscription, and the gateway opens one order per cycle.
+  const [kind, setKind] = useState<Kind>("single");
+  const [plan, setPlan] = useState<PlanChoice>(NEW_PLAN);
+  const [method, setMethod] = useState<SubscriptionMethod>("CARD");
+  const stepKeys = useRef(newStepKeys());
+
+  const start = useMutation({
+    mutationFn: (request: Parameters<typeof startSubscription>[0]) =>
+      startSubscription(request, stepKeys.current),
+    onSuccess: (subscription) => {
+      void queryClient.invalidateQueries({ queryKey: subscriptionKeys.all });
+      void queryClient.invalidateQueries({ queryKey: orderKeys.all });
+      // A card subscription waits for its first invoice, paid by link: open it like an order, so
+      // the link is there to copy. Otherwise the subscription itself.
+      const invoice = subscription.first_invoice;
+      if (invoice) {
+        navigate(`/app/orders/${invoice.order_id}`, {
+          state: { checkoutUrl: invoice.checkout_url },
+        });
+      } else {
+        navigate(`/app/subscriptions/${subscription.id}`);
+      }
+      onCreated?.();
+    },
+  });
+  const isRecurring = kind === "recurring";
+  const needsAmount = !isRecurring || plan.kind === "new";
 
   const create = useMutation({
     mutationFn: (body: Parameters<typeof createOrder>[0]) =>
@@ -45,11 +80,25 @@ export function NewOrderForm({ onCreated }: Props) {
   function submit(event: FormEvent) {
     event.preventDefault();
 
-    setAmountError(amount === null);
+    setAmountError(needsAmount && amount === null);
     setCustomerError(customer === null);
 
     // The gateway wants exactly one of customer_id or inline customer and answers 400 otherwise.
-    if (amount === null || customer === null) {
+    if ((needsAmount && amount === null) || customer === null) {
+      return;
+    }
+
+    if (isRecurring) {
+      start.mutate({
+        customer,
+        plan,
+        amount,
+        name: description.trim() || `Plano ${amount === null ? "" : formatBrl(amount)}`.trim(),
+        method,
+      });
+      return;
+    }
+    if (amount === null) {
       return;
     }
 
@@ -70,21 +119,61 @@ export function NewOrderForm({ onCreated }: Props) {
       <h2 className="mb-4 font-display text-[15px] font-semibold">Nova cobrança</h2>
 
       <form onSubmit={submit} className="space-y-4" noValidate>
-        <MoneyInput valueCents={amount} onChange={setAmount} />
-        {amountError && <p className="text-sm text-danger">Informe um valor válido.</p>}
+        <div
+          role="radiogroup"
+          aria-label="Tipo de cobrança"
+          className="flex gap-1 rounded-pill bg-surface-muted p-1 text-sm"
+        >
+          {(
+            [
+              ["single", "Avulsa"],
+              ["recurring", "Recorrente"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={kind === value}
+              onClick={() => setKind(value)}
+              className={`flex-1 rounded-pill px-3 py-1.5 font-medium transition-colors duration-[var(--motion-fast)] ${
+                kind === value ? "bg-surface text-ink shadow-sm" : "text-muted hover:text-ink"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
 
-        <TextField
-          label="Descrição"
-          value={description}
-          onChange={(event) => setDescription(event.target.value)}
-        />
+        {isRecurring && (
+          <RecurringFields
+            plan={plan}
+            onPlanChange={setPlan}
+            method={method}
+            onMethodChange={setMethod}
+          />
+        )}
+
+        {needsAmount && (
+          <>
+            <MoneyInput valueCents={amount} onChange={setAmount} />
+            {amountError && <p className="text-sm text-danger">Informe um valor válido.</p>}
+
+            <TextField
+              label={isRecurring ? "Nome do plano" : "Descrição"}
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+            />
+          </>
+        )}
 
         <CustomerPicker value={customer} onChange={setCustomer} />
 
         {customerError && <p className="text-sm text-danger">Escolha ou informe um cliente.</p>}
 
-        {/* Not in the mockup, kept: most charges need neither, so they fold away. */}
-        <details className="group text-sm">
+        {/* Not in the mockup, kept: most charges need neither, so they fold away. A subscription
+            has its own calendar, so neither applies to it. */}
+        <details className={`group text-sm ${isRecurring ? "hidden" : ""}`}>
           <summary className="cursor-pointer text-muted select-none hover:text-ink">
             Referência e vencimento
           </summary>
@@ -103,14 +192,14 @@ export function NewOrderForm({ onCreated }: Props) {
           </div>
         </details>
 
-        {create.isError && (
+        {(create.isError || start.isError) && (
           <p role="alert" className="text-sm text-danger">
-            {messageFor(create.error)}
+            {messageFor(create.error ?? start.error)}
           </p>
         )}
 
-        <Button type="submit" size="lg" disabled={create.isPending}>
-          Criar cobrança
+        <Button type="submit" size="lg" disabled={create.isPending || start.isPending}>
+          {isRecurring ? "Criar assinatura" : "Criar cobrança"}
         </Button>
       </form>
     </Card>

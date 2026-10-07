@@ -26,6 +26,8 @@ Painel do merchant e checkout hospedado do payment gateway (React 19, Vite, Tail
 | `/app/orders` | a tela inicial: lista de pedidos (filtro por status, paginação) e o formulário de novo pedido à esquerda; à direita, o pedido escolhido |
 | `/app/orders/:id` | a mesma tela com o pedido aberto à direita: link de checkout, ações, estorno e tentativas |
 | `/app/orders/new` | redireciona para `/app/orders`, onde o formulário fica |
+| `/app/subscriptions` | assinaturas: lista com filtro por status; à direita, a escolhida com as faturas de cada ciclo, o atraso e o cancelamento |
+| `/app/settings/installments` | parcelamento: máximo de parcelas, até quantas sem juros e a taxa ao mês acima disso |
 | `/app/customers` | lista de clientes |
 | `/app/customers/new` | novo cliente |
 | `/pay/:token` | checkout do pagador: Pix, boleto ou cartão (sem chave, o token vem na URL) |
