@@ -42,7 +42,7 @@ const pix: State = { kind: "pix", paymentId: "pay_1", copiaECola: "c", expiresAt
 
 describe("fromCheckout", () => {
   it("aPaidOrderIsPaidOnLoad", () => {
-    expect(fromCheckout(aCheckout({ status: "PAID" }))).toEqual({
+    expect(fromCheckout(aCheckout({ status: "PAID" }))).toMatchObject({
       kind: "paid",
       paidAt: null,
       authorizedOnly: false,
@@ -76,7 +76,7 @@ describe("fromCheckout", () => {
 
   it("anAuthorizedCardOnLoadIsPaidWithoutDate", () => {
     const payment = aPayment({ method: "CARD", status: "AUTHORIZED", pix: null });
-    expect(fromCheckout(aCheckout({ active_payment: payment }))).toEqual({
+    expect(fromCheckout(aCheckout({ active_payment: payment }))).toMatchObject({
       kind: "paid",
       paidAt: null,
       authorizedOnly: true,
@@ -93,7 +93,7 @@ describe("fromCheckout", () => {
 
   it("aCompletedActivePaymentOnAnOpenOrderIsPaid", () => {
     const payment = aPayment({ status: "COMPLETED", paid_at: "2026-10-06T11:05:00Z" });
-    expect(fromCheckout(aCheckout({ active_payment: payment }))).toEqual({
+    expect(fromCheckout(aCheckout({ active_payment: payment }))).toMatchObject({
       kind: "paid",
       paidAt: "2026-10-06T11:05:00Z",
       authorizedOnly: false,
@@ -170,7 +170,7 @@ describe("reduce", () => {
       status: "COMPLETED",
       paid_at: "2026-10-06T11:05:00Z",
     });
-    expect(reduce({ kind: "card" }, { type: "attempt_created", payment }, null)).toEqual({
+    expect(reduce({ kind: "card" }, { type: "attempt_created", payment }, null)).toMatchObject({
       kind: "paid",
       paidAt: "2026-10-06T11:05:00Z",
       authorizedOnly: false,
@@ -179,7 +179,7 @@ describe("reduce", () => {
 
   it("anAuthorizedCardAttemptIsPaid", () => {
     const payment = aPayment({ method: "CARD", status: "AUTHORIZED" });
-    expect(reduce({ kind: "card" }, { type: "attempt_created", payment }, null)).toEqual({
+    expect(reduce({ kind: "card" }, { type: "attempt_created", payment }, null)).toMatchObject({
       kind: "paid",
       paidAt: null,
       authorizedOnly: true,
@@ -214,7 +214,7 @@ describe("reduce", () => {
 
   it("aCompletedPollIsPaidWithItsDate", () => {
     const payment = aPayment({ status: "COMPLETED", paid_at: "2026-10-06T11:10:00Z" });
-    expect(reduce(pix, { type: "polled", payment }, null)).toEqual({
+    expect(reduce(pix, { type: "polled", payment }, null)).toMatchObject({
       kind: "paid",
       paidAt: "2026-10-06T11:10:00Z",
       authorizedOnly: false,

@@ -83,3 +83,61 @@ body {
   color: var(--text);
   font-family: var(--font-body-face);
 }
+
+/* Motion is a token like color (spec 2026-10-07 §2): durations and curves live here, and a payer
+   who asked the system for less motion gets none, flip and step changes included. */
+:root {
+  --motion-fast: 150ms;
+  --motion-base: 240ms;
+  --motion-slow: 480ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-emphasized: cubic-bezier(0.3, 0, 0, 1.15);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+  }
+}
+
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-step-in {
+  animation: step-in var(--motion-base) var(--ease-standard) both;
+}
+
+/* The card preview: two faces back to back, the inner turning on the Y axis. */
+.card-scene {
+  perspective: 1000px;
+}
+
+.card-flipper {
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform var(--motion-slow) var(--ease-emphasized);
+}
+
+.card-flipper[data-flipped="true"] {
+  transform: rotateY(180deg);
+}
+
+.card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+
+.card-face-back {
+  transform: rotateY(180deg);
+}

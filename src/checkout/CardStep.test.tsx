@@ -14,11 +14,17 @@ import { PayPage } from "./PayPage";
 
 vi.mock("qrcode", () => ({ default: { toCanvas: vi.fn().mockResolvedValue(undefined) } }));
 
+const OPTIONS = [
+  { count: 1, installment_amount: 4990, total: 4990, interest_free: true },
+  { count: 2, installment_amount: 2495, total: 4990, interest_free: true },
+  { count: 3, installment_amount: 1730, total: 5190, interest_free: false },
+];
+
 async function openCardForm() {
   server.use(
     http.get(CHECKOUT_URL, ({ request }) => {
       expectNoAuthorization(request);
-      return HttpResponse.json(aCheckout({ methods: ["CARD"] }));
+      return HttpResponse.json(aCheckout({ methods: ["CARD"], installment_options: OPTIONS }));
     }),
   );
 
@@ -53,7 +59,7 @@ describe("CardStep", () => {
 
     const user = await openCardForm();
     await fillCard(user, "4024007153763171");
-    await user.click(screen.getByRole("button", { name: "Pagar" }));
+    await user.click(screen.getByRole("button", { name: /^Pagar/ }));
 
     expect(
       await screen.findByText("Cartão recusado. Tente outro cartão ou outro método."),
@@ -77,7 +83,7 @@ describe("CardStep", () => {
     await fillCard(user, "4024007153763172");
 
     expect(screen.getByText("Número de cartão inválido.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Pagar" }));
+    await user.click(screen.getByRole("button", { name: /^Pagar/ }));
     expect(posts).toBe(0);
   });
 
@@ -103,7 +109,7 @@ describe("CardStep", () => {
     const user = await openCardForm();
     await fillCard(user, "4024007153763171");
     await user.selectOptions(screen.getByLabelText("Parcelas"), "3");
-    await user.click(screen.getByRole("button", { name: "Pagar" }));
+    await user.click(screen.getByRole("button", { name: /^Pagar/ }));
 
     expect(await screen.findByText("Pagamento confirmado")).toBeInTheDocument();
     expect(body).toEqual({

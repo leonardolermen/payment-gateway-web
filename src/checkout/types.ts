@@ -32,6 +32,16 @@ export type Checkout = {
   expires_at: string;
   methods: Method[];
   active_payment: CheckoutPayment | null;
+  // From the gateway's installment settings (spec 2026-10-07 §3). Absent on a gateway that predates
+  // them: the form then offers only "à vista" rather than a rule of its own.
+  installment_options?: InstallmentOption[];
+};
+
+export type InstallmentOption = {
+  count: number;
+  installment_amount: number;
+  total: number;
+  interest_free: boolean;
 };
 
 // Card data only exists in this request body; the reducer never sees it.
