@@ -25,6 +25,8 @@ type Props = {
   token: string;
   amount: number;
   installmentOptions: InstallmentOption[];
+  // Set on a subscription's first invoice: the payer must know before paying that the card stays.
+  subscriptionPlan?: string | null;
   declined?: string;
   send: (event: Event) => void;
 };
@@ -76,7 +78,14 @@ function validate(
  * query cache, storage, DOM) ever holds a number. The preview draws the same state, so it empties
  * with the form.
  */
-export function CardStep({ token, amount, installmentOptions, declined, send }: Props) {
+export function CardStep({
+  token,
+  amount,
+  installmentOptions,
+  subscriptionPlan,
+  declined,
+  send,
+}: Props) {
   const [number, setNumber] = useState("");
   const [holder, setHolder] = useState("");
   const [expiry, setExpiry] = useState("");
@@ -166,6 +175,14 @@ export function CardStep({ token, amount, installmentOptions, declined, send }: 
         brand={brand}
         flipped={isCvvFocused}
       />
+
+      {subscriptionPlan !== undefined && (
+        <p className="mt-4 rounded-xl bg-surface-muted p-3 text-sm">
+          Este cartão fica salvo para as próximas cobranças
+          {subscriptionPlan ? ` de ${subscriptionPlan}` : " da assinatura"}. Você pode cancelar a
+          assinatura com a loja quando quiser.
+        </p>
+      )}
 
       {message && (
         <div role="alert" className="mt-4 rounded-xl bg-warn-bg p-3 text-sm text-warn-fg">

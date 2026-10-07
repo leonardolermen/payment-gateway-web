@@ -48,7 +48,17 @@ export function PaidScreen({ amount, paidAt, authorizedOnly, receipt }: Props) {
       >
         {authorizedOnly ? "Pagamento autorizado" : "Pagamento confirmado"}
       </h2>
-      {amount !== null && <p className="mt-2 font-display text-2xl">{formatBrl(amount)}</p>}
+      {amount !== null && (
+        // With interest the payer paid more than the order: the receipt shows what left the card.
+        <p className="mt-2 font-display text-2xl">
+          {formatBrl(amount + (receipt?.interestAmount ?? 0))}
+        </p>
+      )}
+      {receipt && receipt.interestAmount > 0 && amount !== null && (
+        <p className="text-xs text-muted">
+          {formatBrl(amount)} + {formatBrl(receipt.interestAmount)} de juros do parcelamento
+        </p>
+      )}
       {receipt && <p className="mt-1 text-sm">{receiptLine(receipt)}</p>}
       {paidAt && <p className="text-sm text-muted">{formatDateTime(paidAt)}</p>}
       <p className="mt-4 text-muted">Você pode fechar esta página.</p>

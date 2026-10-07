@@ -217,4 +217,43 @@ describe("card form", () => {
     expect(screen.queryByLabelText("Parcelas")).not.toBeInTheDocument();
     expect(screen.getByText("Pagamento à vista.")).toBeInTheDocument();
   });
+
+  it("theReceiptShowsWhatLeftTheCardWithTheInterest", async () => {
+    server.use(
+      http.post(`${CHECKOUT_URL}/payments`, () =>
+        HttpResponse.json(
+          aCheckoutPayment({
+            method: "CARD",
+            status: "COMPLETED",
+            pix: null,
+            card: { brand: "visa", last4: "3171", installments: 6, interest_amount: 1076 },
+            paid_at: "2026-10-07T13:45:00Z",
+          }),
+          { status: 201 },
+        ),
+      ),
+    );
+    renderCheckout({ amount: 10000 });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Cartão" }));
+    await fillCard(user);
+    await user.click(screen.getByRole("button", { name: /^Pagar/ }));
+
+    expect(await screen.findByText(/^R\$\s110,76$/)).toBeInTheDocument();
+    expect(screen.getByText("Visa final 3171 · 6x")).toBeInTheDocument();
+  });
+
+  it("aSubscriptionsFirstInvoiceSaysTheCardIsKept", async () => {
+    renderCheckout({
+      methods: ["CARD"],
+      plan_name: "Café do mês",
+      saves_card_for_subscription: true,
+    });
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Cartão" }));
+
+    expect(
+      screen.getByText(/Este cartão fica salvo para as próximas cobranças de Café do mês/),
+    ).toBeInTheDocument();
+  });
 });
