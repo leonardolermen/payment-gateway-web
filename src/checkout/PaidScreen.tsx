@@ -15,8 +15,9 @@ function receiptLine(receipt: Receipt): string {
   if (receipt.method !== "CARD" || !receipt.last4) {
     return METHOD_NAMES[receipt.method];
   }
+  // The acquirer sends "VISA", the card's own detection "visa": the receipt reads "Visa" either way.
   const brand = receipt.brand
-    ? receipt.brand.charAt(0).toUpperCase() + receipt.brand.slice(1)
+    ? receipt.brand.charAt(0).toUpperCase() + receipt.brand.slice(1).toLowerCase()
     : "Cartão";
   const installments =
     receipt.installments && receipt.installments > 1 ? ` · ${receipt.installments}x` : " · à vista";
