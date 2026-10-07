@@ -65,6 +65,11 @@ O formulário "Nova cobrança" ganha o seletor **Avulsa | Recorrente**:
   (`POST /v1/plans` se for novo, depois `POST /v1/subscriptions`). Cartão sem cartão salvo cria a
   assinatura esperando o primeiro pagamento, e o link aparece à direita como numa cobrança avulsa.
 
+A lista pede ao gateway `GET /v1/subscriptions?status=&cursor=&limit=` (ambiente da chave, como as
+ordens) e, em cada assinatura, `customer_name`, `plan_name`, `amount`, `interval` e `interval_count`;
+a criação devolve `first_invoice: {order_id, checkout_url}`. Os dois entram na spec do gateway
+`2026-10-07-assinatura-por-link-design.md`.
+
 Nova aba **Assinaturas**: lista (cliente, plano, valor, próxima cobrança, status), detalhe com as faturas
 de cada ciclo ("Fatura 3 · 01/10–31/10 · Paga"), status `PAST_DUE` em destaque com a fatura aberta,
 "Gerar novo link" e "Cobrar de novo" nela, e cancelar "no fim do período" ou "agora". No detalhe de

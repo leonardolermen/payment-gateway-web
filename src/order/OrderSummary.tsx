@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router";
 import { formatDateTime } from "../support/dates";
 import { formatBrl } from "../support/money";
 import { payerLabel } from "./payerLabel";
@@ -26,6 +27,16 @@ export function OrderSummary({ order }: { order: Order }) {
         <Entry label="Cliente">{payerLabel(order)}</Entry>
         <Entry label="Descrição">{order.description ?? "—"}</Entry>
         {order.reference && <Entry label="Referência">{order.reference}</Entry>}
+        {order.subscription_id && (
+          <Entry label="Assinatura">
+            <Link
+              to={`/app/subscriptions/${order.subscription_id}`}
+              className="text-accent underline-offset-2 hover:underline"
+            >
+              Fatura {order.invoice_number ?? "—"}
+            </Link>
+          </Entry>
+        )}
         <Entry label="Vence">{order.expires_at ? formatDateTime(order.expires_at) : "—"}</Entry>
       </dl>
     </div>

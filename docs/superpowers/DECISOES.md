@@ -54,3 +54,13 @@ O formulário lista `installment_options` do checkout; sem o campo, só "à vist
 opção escolhida.
 Rejeitado: manter 1x–12x fixo no front — a regra de mínimo e de juros divergiria da do gateway.
 Custo se errado: enquanto o gateway não publicar as opções, o checkout não parcela.
+
+## 2026-10-07 — Recorrente é uma assinatura, criada pelo mesmo formulário
+"Nova cobrança" escolhe entre Avulsa (`POST /v1/orders`) e Recorrente: cliente novo se preciso, plano novo
+se preciso e a assinatura (`POST /v1/subscriptions`), nessa ordem, cada passo com sua `Idempotency-Key`.
+Documento já cadastrado (`CUSTOMER_EXISTS`) vira o cliente da assinatura. Assinatura no cartão abre a 1ª
+fatura à direita, com o link, como uma cobrança avulsa.
+Rejeitado: uma tela própria de assinatura — o lojista pensa em "cobrar", e o tipo é um detalhe da cobrança.
+Custo se errado: um erro no meio (plano criado, assinatura recusada) deixa um plano sem assinatura; o
+reenvio reaproveita o plano pela mesma chave, mas um formulário recarregado cria outro.
+
