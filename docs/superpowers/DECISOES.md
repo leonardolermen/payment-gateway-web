@@ -34,3 +34,23 @@ vencimento do formulário ficam recolhidos em "Referência e vencimento".
 Rejeitado: uma página por ação, como antes — criar e conferir o link custava duas navegações.
 Custo se errado: em tela estreita a lista e o pedido se empilham (o pedido primeiro); quem precisar da
 descrição na lista abre o pedido.
+
+## 2026-10-07 — Etapa do checkout na URL; o servidor vence
+`?etapa=metodo|cartao|pix|boleto|confirmacao`, com uma entrada nova de histórico a cada avanço: o voltar do
+navegador volta uma etapa. Voltar de um Pix ou boleto cancela a tentativa no servidor antes; se o cancelamento
+falha, a etapa volta para a URL e o pagador continua onde estava. Uma URL pedindo uma etapa que o estado não
+confirma é reescrita.
+Rejeitado: o passo só em memória — o voltar saía do checkout.
+Custo se errado: cada avanço é uma entrada de histórico; quem pagou e aperta voltar passa por elas até sair.
+
+## 2026-10-07 — Animação sem biblioteca, com tokens de movimento
+O cartão que vira e a entrada de cada etapa usam CSS (`--motion-*`, `--ease-*`), zerados por
+`prefers-reduced-motion`. O cartão desenhado é decorativo (`aria-hidden`) e só mostra o estado do formulário.
+Rejeitado: framer-motion — peso de biblioteca para um flip e um fade.
+Custo se errado: transições mais elaboradas pedem reabrir a decisão.
+
+## 2026-10-07 — Parcelas só do gateway
+O formulário lista `installment_options` do checkout; sem o campo, só "à vista". O botão mostra o total da
+opção escolhida.
+Rejeitado: manter 1x–12x fixo no front — a regra de mínimo e de juros divergiria da do gateway.
+Custo se errado: enquanto o gateway não publicar as opções, o checkout não parcela.

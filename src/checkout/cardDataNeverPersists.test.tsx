@@ -52,7 +52,7 @@ async function payWithTheCard(): Promise<{ queryClient: QueryClient; states: Sta
   await user.type(screen.getByLabelText("Nome impresso no cartão"), "MARIA SILVA");
   await user.type(screen.getByLabelText("Validade (MM/AA)"), "1230");
   await user.type(screen.getByLabelText("CVV"), "987");
-  await user.click(screen.getByRole("button", { name: "Pagar" }));
+  await user.click(screen.getByRole("button", { name: /^Pagar/ }));
 
   return { queryClient, states };
 }

@@ -12,10 +12,17 @@ export async function getCheckout(token: string): Promise<Checkout> {
   return data;
 }
 
-export async function createAttempt(token: string, body: AttemptBody): Promise<CheckoutPayment> {
+// The key is optional on the public route; the card form sends one so a retry after a timeout
+// replays the same charge instead of making a second.
+export async function createAttempt(
+  token: string,
+  body: AttemptBody,
+  idempotencyKey?: string,
+): Promise<CheckoutPayment> {
   const { data } = await request<CheckoutPayment>(`${base(token)}/payments`, {
     method: "POST",
     body,
+    idempotencyKey,
   });
 
   return data;

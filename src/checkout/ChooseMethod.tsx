@@ -42,7 +42,13 @@ export function ChooseMethod({ token, methods, send }: Props) {
 
   return (
     <section>
-      <h2 className="mb-3 font-display text-lg font-semibold">Como você quer pagar?</h2>
+      <h2
+        data-step-heading
+        tabIndex={-1}
+        className="mb-3 font-display text-lg font-semibold outline-none"
+      >
+        Como você quer pagar?
+      </h2>
       <div className="flex flex-wrap gap-2 rounded-pill bg-surface-muted p-1">
         {methods.map((method) => (
           <button
