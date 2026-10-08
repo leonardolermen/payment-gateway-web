@@ -42,6 +42,9 @@ export function AppLayout() {
             <NavLink to="/app/customers" className={navClass}>
               Clientes
             </NavLink>
+            <NavLink to="/app/settings" className={navClass}>
+              Configurações
+            </NavLink>
           </nav>
           <div className="flex items-center justify-end gap-2">
             {merchant.data && (
