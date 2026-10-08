@@ -14,6 +14,14 @@ describe("previewInstallments", () => {
     expect(options[5]).toEqual({ count: 6, installment: 1846, total: 11076, interestFree: false });
   });
 
+  it("arithmeticNoiseAboveAWholeCentIsNotCeiledUp", () => {
+    // 59617 × 0.0005 / (1 − 1.0005^−11) lands on 5436.00000047 in doubles; the gateway's
+    // DECIMAL64 lands on the same whole cent and charges 5436, so the preview must show 5436.
+    const option = previewInstallments(59617, settings(12, 1, 5))[10];
+
+    expect(option).toEqual({ count: 11, installment: 5436, total: 59796, interestFree: false });
+  });
+
   it("interestFreeOnesAreTruncatedAndTotalTheAmount", () => {
     const options = previewInstallments(10000, settings(10, 3, 299));
 

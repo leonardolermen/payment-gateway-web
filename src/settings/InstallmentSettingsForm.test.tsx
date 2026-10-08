@@ -43,6 +43,19 @@ describe("InstallmentSettingsForm", () => {
     expect(within(preview).getByText("3x de R$ 33,33")).toBeInTheDocument();
   });
 
+  it("thePreviewHidesWhenTheValuesCouldNotBeSaved", async () => {
+    renderForm();
+    const max = await screen.findByLabelText("Máximo de parcelas");
+    expect(screen.getByRole("table", { name: "Prévia das parcelas" })).toBeInTheDocument();
+
+    // 13 is over the gateway's ceiling: a preview of 13x would show a plan that can never exist,
+    // and a huge number here would loop the preview on the main thread.
+    await userEvent.clear(max);
+    await userEvent.type(max, "13");
+
+    expect(screen.queryByRole("table", { name: "Prévia das parcelas" })).not.toBeInTheDocument();
+  });
+
   it("sendsBpsAndShowsTheSavedState", async () => {
     let sent: unknown = null;
     server.use(

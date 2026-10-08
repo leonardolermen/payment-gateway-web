@@ -21,18 +21,19 @@ const MAX_RATE_BPS = 1000;
 
 type Errors = { max?: string; freeUpTo?: string; rate?: string };
 
+// Null for anything validate() would refuse: the preview must never show a plan that cannot be
+// saved, and a huge "max" would otherwise loop the preview on the main thread.
 function parseInput(max: string, freeUpTo: string, rate: string): InstallmentSettingsInput | null {
-  const maxNumber = Number(max);
-  const freeUpToNumber = Number(freeUpTo);
   const bps = percentToBps(rate);
-  if (!Number.isInteger(maxNumber) || maxNumber < 1 || !Number.isInteger(freeUpToNumber)) {
-    return null;
-  }
-  if (bps === null) {
+  if (Object.keys(validate(max, freeUpTo, rate)).length > 0 || bps === null) {
     return null;
   }
 
-  return { max_installments: maxNumber, interest_free_up_to: freeUpToNumber, monthly_rate_bps: bps };
+  return {
+    max_installments: Number(max),
+    interest_free_up_to: Number(freeUpTo),
+    monthly_rate_bps: bps,
+  };
 }
 
 function validate(max: string, freeUpTo: string, rate: string): Errors {
