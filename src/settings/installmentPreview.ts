@@ -34,11 +34,7 @@ export function previewInstallments(
   return options;
 }
 
-function price(
-  amount: number,
-  input: InstallmentSettingsInput,
-  count: number,
-): InstallmentPreview {
+function price(amount: number, input: InstallmentSettingsInput, count: number): InstallmentPreview {
   if (count <= input.interest_free_up_to || input.monthly_rate_bps === 0) {
     return { count, installment: Math.floor(amount / count), total: amount, interestFree: true };
   }

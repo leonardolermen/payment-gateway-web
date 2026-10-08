@@ -61,8 +61,8 @@ export function EditPlanDialog({ plan, onDone }: Props) {
           Ativo
         </label>
         <p className="text-xs text-muted">
-          Desativar esconde o plano de novas assinaturas e não cancela assinaturas existentes.
-          Valor e intervalo não mudam: para outro preço, crie outro plano.
+          Desativar esconde o plano de novas assinaturas e não cancela assinaturas existentes. Valor
+          e intervalo não mudam: para outro preço, crie outro plano.
         </p>
         {save.isError && (
           <p role="alert" className="text-sm text-danger">
