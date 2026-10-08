@@ -33,6 +33,7 @@ describe("AppLayout header", () => {
     const nav = within(header).getByRole("navigation");
     expect(within(nav).getByRole("link", { name: "Cobranças" })).toHaveClass("border-accent");
     expect(within(nav).getByRole("link", { name: "Clientes" })).toHaveClass("border-transparent");
+    expect(within(nav).getByRole("link", { name: "Planos" })).toHaveAttribute("href", "/app/plans");
     expect(within(nav).getByRole("link", { name: "Configurações" })).toHaveAttribute(
       "href",
       "/app/settings",

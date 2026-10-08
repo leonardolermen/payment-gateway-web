@@ -6,6 +6,7 @@ import { CustomersPage } from "../customer/CustomersPage";
 import { NewCustomerPage } from "../customer/NewCustomerPage";
 import { OrderDetailPanel } from "../order/OrderDetailPanel";
 import { NoOrderSelected, OrdersWorkspace } from "../order/OrdersWorkspace";
+import { PlansPage } from "../plan/PlansPage";
 import { SettingsPage } from "../settings/SettingsPage";
 import { AppLayout } from "./AppLayout";
 
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
           },
           { path: "customers", element: <CustomersPage /> },
           { path: "customers/new", element: <NewCustomerPage /> },
+          { path: "plans", element: <PlansPage /> },
           { path: "settings", element: <SettingsPage /> },
         ],
       },
