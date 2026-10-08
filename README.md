@@ -28,9 +28,12 @@ Painel do merchant e checkout hospedado do payment gateway (React 19, Vite, Tail
 | `/app/orders/new` | redireciona para `/app/orders`, onde o formulário fica |
 | `/app/customers` | lista de clientes |
 | `/app/customers/new` | novo cliente |
+| `/app/plans` | planos: lista com filtro "só ativos", novo plano e edição de nome/ativo |
+| `/app/settings` | configurações: conta (loja, ambiente, prefixo da chave) e parcelamento (máximo, sem juros até, juros ao mês, prévia do que o pagador vê) |
 | `/pay/:token` | checkout do pagador: Pix, boleto ou cartão (sem chave, o token vem na URL) |
 
 Rotas da API usadas nas listas: `GET /v1/orders?status&limit&cursor` e `GET /v1/customers?limit&cursor`.
+Planos e configurações usam `GET/POST /v1/plans`, `PATCH /v1/plans/{id}` e `GET/PUT /v1/installment-settings`.
 O cursor é o id do último item da página anterior (não há `X-Next-Cursor`).
 A chave vai no header `Authorization: Bearer`.
 
