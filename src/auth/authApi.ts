@@ -37,13 +37,14 @@ export function login(body: { email: string; password: string }): Promise<Tokens
 }
 
 export function acceptInvite(token: string, name: string, password: string): Promise<Tokens> {
-  return openSession("/v1/auth/invites/accept", { token, name, password });
+  return openSession("/v1/auth/invite/accept", { token, name, password });
 }
 
-// The local session goes away even when the call fails: the user asked to leave.
 export async function logout(): Promise<void> {
   try {
     await postAuth("/v1/auth/logout");
+  } catch {
+    // Swallowed on purpose: a dead network or a 5xx must not keep someone signed in.
   } finally {
     clearSession();
   }
@@ -85,22 +86,22 @@ export async function listSessions(): Promise<SessionSummary[]> {
 }
 
 export async function revokeOtherSessions(): Promise<void> {
-  await merchantRequest("/v1/me/sessions", { method: "DELETE" });
+  await merchantRequest("/v1/me/sessions/others", { method: "DELETE" });
 }
 
 export async function getTeam(): Promise<Team> {
-  const { data } = await merchantRequest<Team>("/v1/team");
+  const { data } = await merchantRequest<Team>("/v1/merchant/users");
   return data;
 }
 
 export async function invite(email: string, role: Role): Promise<void> {
-  await merchantRequest("/v1/team/invites", { method: "POST", body: { email, role } });
+  await merchantRequest("/v1/invites", { method: "POST", body: { email, role } });
 }
 
 export async function changeRole(id: string, role: Role): Promise<void> {
-  await merchantRequest(`/v1/team/users/${id}`, { method: "PATCH", body: { role } });
+  await merchantRequest(`/v1/merchant/users/${id}`, { method: "PATCH", body: { role } });
 }
 
 export async function removeUser(id: string): Promise<void> {
-  await merchantRequest(`/v1/team/users/${id}`, { method: "DELETE" });
+  await merchantRequest(`/v1/merchant/users/${id}`, { method: "DELETE" });
 }
