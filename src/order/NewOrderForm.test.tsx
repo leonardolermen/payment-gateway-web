@@ -2,7 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { storeApiKey } from "../auth/apiKey";
+import { setAccessToken } from "../auth/session";
 import { anOrder } from "../test/fixtures/orders";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
@@ -11,7 +11,7 @@ import { NewOrderForm } from "./NewOrderForm";
 const ORDERS = "http://localhost:8080/v1/orders";
 
 function renderPage() {
-  storeApiKey("gk_test_abc");
+  setAccessToken("gs_test");
   return renderWithProviders(
     [
       { path: "/app/orders", element: <NewOrderForm /> },

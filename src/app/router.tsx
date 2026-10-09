@@ -1,6 +1,5 @@
 import { createBrowserRouter, Navigate } from "react-router";
-import { LoginPage } from "../auth/LoginPage";
-import { RequireApiKey } from "../auth/RequireApiKey";
+import { RequireSession } from "../auth/RequireSession";
 import { PayPage } from "../checkout/PayPage";
 import { CustomersPage } from "../customer/CustomersPage";
 import { NewCustomerPage } from "../customer/NewCustomerPage";
@@ -12,10 +11,10 @@ import { AppLayout } from "./AppLayout";
 
 export const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/app/orders" replace /> },
-  { path: "/app/login", element: <LoginPage /> },
+  { path: "/app/login", element: <Navigate to="/login" replace /> },
   {
     path: "/app",
-    element: <RequireApiKey />,
+    element: <RequireSession />,
     children: [
       {
         element: <AppLayout />,

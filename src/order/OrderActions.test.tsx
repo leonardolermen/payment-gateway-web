@@ -2,7 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { storeApiKey } from "../auth/apiKey";
+import { setAccessToken } from "../auth/session";
 import { anOrder, aPayment } from "../test/fixtures/orders";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
@@ -12,7 +12,7 @@ import type { Order, Payment } from "./types";
 const API = "http://localhost:8080/v1";
 
 function renderActions(order: Order, attempts: Payment[] = []) {
-  storeApiKey("gk_test_abc");
+  setAccessToken("gs_test");
   return renderWithProviders([
     { path: "/", element: <OrderActions order={order} attempts={attempts} /> },
   ]);

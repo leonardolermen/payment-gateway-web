@@ -2,35 +2,28 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { storeApiKey } from "../auth/apiKey";
+import { setAccessToken } from "../auth/session";
+import { mockMe } from "../test/me";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
 import { SettingsPage } from "./SettingsPage";
 
 describe("SettingsPage", () => {
-  it("showsTheMerchantTheEnvironmentAndOnlyTheKeyPrefix", async () => {
-    storeApiKey("gk_test_abcdefghijklmnop");
-    server.use(
-      http.get("http://localhost:8080/v1/merchant", () =>
-        HttpResponse.json({ merchant_id: "m_1", name: "Loja de Dev", environment: "TEST" }),
-      ),
-    );
+  it("showsTheStoreAndTheEnvironment", async () => {
+    setAccessToken("gs_test");
+    mockMe();
     renderWithProviders([{ path: "/app/settings", element: <SettingsPage /> }], {
       initialEntries: ["/app/settings"],
     });
 
     expect(await screen.findByText("Loja de Dev")).toBeInTheDocument();
     expect(screen.getByText(/não movem dinheiro/)).toBeInTheDocument();
-    expect(screen.getByText("gk_test_abcd…")).toBeInTheDocument();
-    expect(screen.queryByText(/abcdefghijklmnop/)).not.toBeInTheDocument();
   });
 
   it("switchesToTheInstallmentsTab", async () => {
-    storeApiKey("gk_test_abc");
+    setAccessToken("gs_test");
+    mockMe();
     server.use(
-      http.get("http://localhost:8080/v1/merchant", () =>
-        HttpResponse.json({ merchant_id: "m_1", name: "Loja", environment: "LIVE" }),
-      ),
       http.get("http://localhost:8080/v1/installment-settings", () =>
         HttpResponse.json({
           environment: "LIVE",

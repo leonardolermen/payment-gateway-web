@@ -3,7 +3,7 @@ import { clearSession, readAccessToken, setAccessToken } from "../auth/session";
 import { GatewayRequestError } from "./gatewayError";
 import { request } from "./http";
 
-type Init = Omit<NonNullable<Parameters<typeof request>[1]>, "apiKey" | "credentials">;
+type Init = Omit<NonNullable<Parameters<typeof request>[1]>, "credentials">;
 
 export class Unauthenticated extends Error {
   constructor() {

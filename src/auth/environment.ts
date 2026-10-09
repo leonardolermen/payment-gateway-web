@@ -12,10 +12,21 @@ export function readEnvironment(): Environment {
   }
 }
 
+const listeners = new Set<() => void>();
+
+export function onEnvironmentChange(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 export function storeEnvironment(environment: Environment): void {
   try {
     window.localStorage.setItem(ENVIRONMENT_KEY, environment);
   } catch {
     // Without storage the choice simply does not survive a reload.
   }
+
+  listeners.forEach((listener) => listener());
 }

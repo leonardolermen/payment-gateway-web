@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { storeApiKey } from "../auth/apiKey";
+import { setAccessToken } from "../auth/session";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
 import { NewCustomerPage } from "./NewCustomerPage";
@@ -10,7 +10,7 @@ import { NewCustomerPage } from "./NewCustomerPage";
 const CUSTOMERS = "http://localhost:8080/v1/customers";
 
 async function submitWith(document: string) {
-  storeApiKey("gk_test_abc");
+  setAccessToken("gs_test");
   renderWithProviders([{ path: "/app/customers/new", element: <NewCustomerPage /> }], {
     initialEntries: ["/app/customers/new"],
   });

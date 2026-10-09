@@ -5,12 +5,11 @@ type Init = {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
   headers?: Record<string, string>;
-  apiKey?: string;
   credentials?: "include";
   idempotencyKey?: string;
 };
 
-// Never logs: requests carry the merchant API key and the checkout token.
+// Never logs: requests carry the session bearer and the checkout token.
 export async function request<T>(
   path: string,
   init: Init = {},
@@ -18,9 +17,6 @@ export async function request<T>(
   const headers: Record<string, string> = { Accept: "application/json", ...init.headers };
   if (init.body !== undefined) {
     headers["Content-Type"] = "application/json";
-  }
-  if (init.apiKey) {
-    headers.Authorization = `Bearer ${init.apiKey}`;
   }
   if (init.idempotencyKey) {
     headers["Idempotency-Key"] = init.idempotencyKey;

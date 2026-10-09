@@ -2,7 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
-import { storeApiKey } from "../auth/apiKey";
+import { setAccessToken } from "../auth/session";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
 import { PlansPage } from "./PlansPage";
@@ -21,7 +21,7 @@ const monthly = {
 const old = { ...monthly, id: "pl_2", name: "Antigo", active: false, trial_days: 0 };
 
 function renderPage() {
-  storeApiKey("gk_test_abc");
+  setAccessToken("gs_test");
   return renderWithProviders([{ path: "/app/plans", element: <PlansPage /> }], {
     initialEntries: ["/app/plans"],
   });

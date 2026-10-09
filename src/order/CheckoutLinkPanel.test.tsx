@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
-import { storeApiKey } from "../auth/apiKey";
+import { setAccessToken } from "../auth/session";
 import { anOrder } from "../test/fixtures/orders";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
@@ -10,7 +10,7 @@ import { CheckoutLinkPanel } from "./CheckoutLinkPanel";
 import type { Order } from "./types";
 
 function renderPanel(order: Order, initialUrl: string | null) {
-  storeApiKey("gk_test_abc");
+  setAccessToken("gs_test");
   return renderWithProviders([
     { path: "/", element: <CheckoutLinkPanel order={order} initialUrl={initialUrl} /> },
   ]);
