@@ -15,6 +15,8 @@ export type ProviderStatus = {
   secrets_set: Record<string, boolean>;
   last_test: ProbeOutcome | null;
   notification_key_set: boolean | null;
+  // Stored non-secret values; the gateway never returns secrets here.
+  fields: Record<string, string>;
 };
 
 export type ProvidersOverview = {
