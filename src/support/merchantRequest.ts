@@ -83,6 +83,12 @@ function send<T>(path: string, init: Init) {
   });
 }
 
+// A wrong current password on POST /v1/me/password is also a 401, but it is an answer about the
+// password, not about the session: refreshing and then logging out would punish a typo.
 function isUnauthorized(e: unknown): boolean {
-  return e instanceof GatewayRequestError && e.error.status === 401;
+  return (
+    e instanceof GatewayRequestError &&
+    e.error.status === 401 &&
+    e.error.code !== "INVALID_CREDENTIALS"
+  );
 }

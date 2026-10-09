@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { storeEnvironment } from "../auth/environment";
 import { clearSession, readAccessToken, setAccessToken } from "../auth/session";
 import { server } from "../test/msw/server";
+import { GatewayRequestError } from "./gatewayError";
 import { merchantRequest, onUnauthenticated, Unauthenticated } from "./merchantRequest";
 
 const API = "http://localhost:8080";
@@ -99,5 +100,29 @@ describe("merchantRequest", () => {
     await Promise.all([merchantRequest("/v1/orders"), merchantRequest("/v1/customers")]);
 
     expect(refreshCalls).toBe(1);
+  });
+
+  it("aWrongCurrentPasswordIsAnAnswerNotAnExpiredSession", async () => {
+    setAccessToken("gs_live");
+    let refreshCalls = 0;
+    server.use(
+      http.post(`${API}/v1/me/password`, () =>
+        HttpResponse.json(
+          { type: "urn:gateway:INVALID_CREDENTIALS", status: 401, detail: "x" },
+          { status: 401 },
+        ),
+      ),
+      http.post(`${API}/v1/auth/refresh`, () => {
+        refreshCalls += 1;
+        return expired();
+      }),
+    );
+
+    await expect(
+      merchantRequest("/v1/me/password", { method: "POST", body: {} }),
+    ).rejects.toBeInstanceOf(GatewayRequestError);
+
+    expect(refreshCalls).toBe(0);
+    expect(readAccessToken()).toBe("gs_live");
   });
 });
