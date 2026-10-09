@@ -2,18 +2,21 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
-import { storeApiKey } from "../auth/apiKey";
+import { setAccessToken } from "../auth/session";
+import type { Role } from "../auth/types";
 import { anOrder } from "../test/fixtures/orders";
+import { aMe } from "../test/me";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
 import { CheckoutLinkPanel } from "./CheckoutLinkPanel";
 import type { Order } from "./types";
 
-function renderPanel(order: Order, initialUrl: string | null) {
-  storeApiKey("gk_test_abc");
-  return renderWithProviders([
-    { path: "/", element: <CheckoutLinkPanel order={order} initialUrl={initialUrl} /> },
-  ]);
+function renderPanel(order: Order, initialUrl: string | null, role: Role = "FINANCE") {
+  setAccessToken("gs_test");
+  return renderWithProviders(
+    [{ path: "/", element: <CheckoutLinkPanel order={order} initialUrl={initialUrl} /> }],
+    { me: aMe({ role }) },
+  );
 }
 
 describe("CheckoutLinkPanel", () => {
@@ -34,10 +37,13 @@ describe("CheckoutLinkPanel", () => {
   it("rotatesToANewUrlWhenThereIsNone", async () => {
     let key: string | null = null;
     server.use(
-      http.post("http://localhost:8080/v1/orders/ord_00000001/checkout-token/rotate", ({ request }) => {
-        key = request.headers.get("Idempotency-Key");
-        return HttpResponse.json(anOrder({ checkout_url: "https://pay.example/c/new" }));
-      }),
+      http.post(
+        "http://localhost:8080/v1/orders/ord_00000001/checkout-token/rotate",
+        ({ request }) => {
+          key = request.headers.get("Idempotency-Key");
+          return HttpResponse.json(anOrder({ checkout_url: "https://pay.example/c/new" }));
+        },
+      ),
     );
     renderPanel(anOrder(), null);
 
@@ -56,6 +62,22 @@ describe("CheckoutLinkPanel", () => {
   });
 });
 
+describe("CheckoutLinkPanel permissions", () => {
+  // Rotating kills the link the payer already has: a write, not a view.
+  it("readonlyCannotRotateTheLink", () => {
+    renderPanel(anOrder(), "https://pay.example/c/abc", "READONLY");
+
+    expect(screen.getByText("https://pay.example/c/abc")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Gerar novo link" })).not.toBeInTheDocument();
+  });
+
+  it("financeRotatesTheLink", () => {
+    renderPanel(anOrder(), "https://pay.example/c/abc", "FINANCE");
+
+    expect(screen.getByRole("button", { name: "Gerar novo link" })).toBeInTheDocument();
+  });
+});
+
 describe("CheckoutLinkPanel idempotency keys", () => {
   const ROTATE = "http://localhost:8080/v1/orders/ord_00000001/checkout-token/rotate";
 
@@ -64,7 +86,9 @@ describe("CheckoutLinkPanel idempotency keys", () => {
     server.use(
       http.post(ROTATE, ({ request }) => {
         keys.push(request.headers.get("Idempotency-Key"));
-        return keys.length === 1 ? HttpResponse.error() : HttpResponse.json(anOrder({ checkout_url: "https://pay.example/c/new" }));
+        return keys.length === 1
+          ? HttpResponse.error()
+          : HttpResponse.json(anOrder({ checkout_url: "https://pay.example/c/new" }));
       }),
     );
     renderPanel(anOrder(), null);

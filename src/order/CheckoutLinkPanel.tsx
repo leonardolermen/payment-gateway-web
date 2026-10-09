@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
+import { useCan } from "../auth/useCan";
 import { copyToClipboard } from "../support/copyToClipboard";
 import { messageFor } from "../support/gatewayError";
 import { Button } from "../support/ui/Button";
@@ -15,6 +16,7 @@ export function CheckoutLinkPanel({ order, initialUrl, children }: Props) {
   const queryClient = useQueryClient();
   const [url, setUrl] = useState(initialUrl);
   const [copied, setCopied] = useState(false);
+  const canRotate = useCan("rotate_checkout_link");
 
   const rotateKey = useIdempotencyKey();
 
@@ -63,14 +65,16 @@ export function CheckoutLinkPanel({ order, initialUrl, children }: Props) {
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          disabled={rotate.isPending}
-          onClick={() => rotate.mutate()}
-        >
-          Gerar novo link
-        </Button>
+        {canRotate && (
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={rotate.isPending}
+            onClick={() => rotate.mutate()}
+          >
+            Gerar novo link
+          </Button>
+        )}
         {children}
       </div>
 

@@ -2,7 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { storeApiKey } from "../auth/apiKey";
+import { setAccessToken } from "../auth/session";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
 import { InstallmentSettingsForm } from "./InstallmentSettingsForm";
@@ -16,7 +16,7 @@ const current = {
 };
 
 function renderForm() {
-  storeApiKey("gk_test_abc");
+  setAccessToken("gs_test");
   server.use(
     http.get("http://localhost:8080/v1/installment-settings", () => HttpResponse.json(current)),
   );

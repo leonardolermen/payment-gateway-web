@@ -2,7 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
-import { storeApiKey } from "../auth/apiKey";
+import { setAccessToken } from "../auth/session";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
 import { PlanForm } from "./PlanForm";
@@ -20,7 +20,7 @@ const created = {
 };
 
 function renderForm(onCreated = vi.fn()) {
-  storeApiKey("gk_test_abc");
+  setAccessToken("gs_test");
   renderWithProviders([
     { path: "/", element: <PlanForm onCreated={onCreated} onCancel={() => {}} /> },
   ]);

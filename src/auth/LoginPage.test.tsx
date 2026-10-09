@@ -2,107 +2,83 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { useLocation } from "react-router";
-import { describe, expect, it } from "vitest";
-import { renderWithProviders } from "../test/render";
+import { afterEach, describe, expect, it } from "vitest";
 import { server } from "../test/msw/server";
-import { KEY } from "./apiKey";
+import { renderWithProviders } from "../test/render";
 import { LoginPage } from "./LoginPage";
+import { clearSession } from "./session";
+
+const API = "http://localhost:8080";
 
 function Where() {
   const location = useLocation();
+
   return <div data-testid="where">{location.pathname + location.search}</div>;
 }
 
 const routes = [
-  { path: "/app/login", element: <LoginPage /> },
+  { path: "/login", element: <LoginPage /> },
   { path: "*", element: <Where /> },
 ];
 
-const merchant = { merchant_id: "m1", name: "Loja", environment: "TEST" };
+function answerLogin(response: () => Response) {
+  server.use(http.post(`${API}/v1/auth/login`, response));
+}
 
-async function logIn(key: string) {
-  await userEvent.type(screen.getByLabelText("Chave de API"), key);
+function opened() {
+  return HttpResponse.json({ access_token: "gs_x", expires_in: 900 });
+}
+
+async function signIn(entry: string) {
+  renderWithProviders(routes, { initialEntries: [entry] });
+  await userEvent.type(screen.getByLabelText("E-mail"), "ana@loja.com");
+  await userEvent.type(screen.getByLabelText("Senha"), "senha-correta-1");
   await userEvent.click(screen.getByRole("button", { name: "Entrar" }));
 }
 
-describe("LoginPage", () => {
-  it("aKeyPastedWithWhitespaceStillLogsIn", async () => {
-    let authorization: string | null = null;
-    server.use(
-      http.get("http://localhost:8080/v1/merchant", ({ request }) => {
-        authorization = request.headers.get("authorization");
-        return HttpResponse.json(merchant);
-      }),
-    );
-    renderWithProviders(routes, { initialEntries: ["/app/login"] });
+afterEach(() => clearSession());
 
-    await logIn("  gk_test_abc\n");
+describe("LoginPage", () => {
+  it("landsOnTheOrdersByDefault", async () => {
+    answerLogin(opened);
+
+    await signIn("/login");
 
     expect(await screen.findByTestId("where")).toHaveTextContent("/app/orders");
-    expect(authorization).toBe("Bearer gk_test_abc");
-    expect(window.sessionStorage.getItem(KEY)).toBe("gk_test_abc");
   });
 
-  it("anInvalidKeyShowsAFixedMessage", async () => {
-    server.use(
-      http.get("http://localhost:8080/v1/merchant", () =>
-        HttpResponse.json(
-          { type: "urn:gateway:UNAUTHENTICATED", status: 401, detail: "secret detail" },
-          { status: 401 },
-        ),
+  it("honoursASameOriginNext", async () => {
+    answerLogin(opened);
+
+    await signIn("/login?next=%2Fapp%2Fplans%3Fpage%3D2");
+
+    expect(await screen.findByTestId("where")).toHaveTextContent("/app/plans?page=2");
+  });
+
+  it("ignoresAProtocolRelativeNext", async () => {
+    answerLogin(opened);
+
+    await signIn("/login?next=//evil.com");
+
+    expect(await screen.findByTestId("where")).toHaveTextContent("/app/orders");
+  });
+
+  it("saysTheCredentialsAreWrongAndClearsThePassword", async () => {
+    answerLogin(() =>
+      HttpResponse.json(
+        { type: "urn:gateway:INVALID_CREDENTIALS", status: 401, detail: "bad" },
+        { status: 401 },
       ),
     );
-    renderWithProviders(routes, { initialEntries: ["/app/login"] });
 
-    await logIn("gk_test_bad");
+    await signIn("/login");
 
-    expect(await screen.findByText("Chave de API inválida.")).toBeInTheDocument();
-    expect(screen.queryByText(/secret detail/)).not.toBeInTheDocument();
-    expect(window.sessionStorage.getItem(KEY)).toBeNull();
-  });
-
-  it("showToggleRevealsTheKeyWithoutChangingIt", async () => {
-    renderWithProviders(routes, { initialEntries: ["/app/login"] });
-    const input = screen.getByLabelText("Chave de API");
-
-    await userEvent.type(input, "gk_test_abc");
-    expect(input).toHaveAttribute("type", "password");
-
-    await userEvent.click(screen.getByRole("button", { name: "Mostrar" }));
-    expect(input).toHaveAttribute("type", "text");
-    expect(input).toHaveValue("gk_test_abc");
-    expect(screen.getByRole("button", { name: "Ocultar" })).toBeInTheDocument();
-  });
-
-  it("explainsWhereTheKeyComesFromAndWhatTheEnvironmentMeans", () => {
-    renderWithProviders(routes, { initialEntries: ["/app/login"] });
-
-    expect(screen.getByRole("heading", { name: "Entrar no painel" })).toBeInTheDocument();
-    expect(screen.getByText(/gk_test_/)).toBeInTheDocument();
-    expect(screen.getByText(/não movem dinheiro/)).toBeInTheDocument();
-  });
-
-  it("nextIsHonoured", async () => {
-    server.use(http.get("http://localhost:8080/v1/merchant", () => HttpResponse.json(merchant)));
-    renderWithProviders(routes, { initialEntries: ["/app/login?next=/app/orders/01X"] });
-
-    await logIn("gk_test_abc");
-
-    expect(await screen.findByTestId("where")).toHaveTextContent("/app/orders/01X");
-  });
-
-  it("dropsTheCacheOfThePreviousMerchantOnLogin", async () => {
-    server.use(
-      http.get("http://localhost:8080/v1/merchant", () =>
-        HttpResponse.json({ ...merchant, name: "B" }),
-      ),
+    expect(await screen.findByRole("alert")).toHaveTextContent("E-mail ou senha incorretos.");
+    expect(screen.getByLabelText("Senha")).toHaveValue("");
+    expect(screen.getByRole("link", { name: "Criar conta" })).toHaveAttribute("href", "/signup");
+    expect(screen.getByRole("link", { name: "Esqueci a senha" })).toHaveAttribute(
+      "href",
+      "/forgot",
     );
-    const { queryClient } = renderWithProviders(routes, { initialEntries: ["/app/login"] });
-    queryClient.setQueryData(["merchant"], { name: "A" });
-
-    await logIn("gk_test_b");
-
-    await screen.findByTestId("where");
-    expect(queryClient.getQueryData(["merchant"])).toBeUndefined();
   });
 });

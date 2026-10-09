@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useCan } from "../auth/useCan";
 import { formatDateTime } from "../support/dates";
 import { messageFor } from "../support/gatewayError";
 import { Badge } from "../support/ui/Badge";
@@ -16,6 +17,8 @@ import type { Plan } from "./types";
 const HEADERS = ["Nome", "Preço", "Trial", "Status", "Criado em", ""];
 
 export function PlansPage() {
+  const mayCreatePlan = useCan("create_plan");
+  const mayEditPlan = useCan("edit_plan");
   const [activeOnly, setActiveOnly] = useState(false);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState<Plan | null>(null);
@@ -28,9 +31,11 @@ export function PlansPage() {
       <PageHeader
         title="Planos"
         action={
-          <Button onClick={() => setCreating(true)}>
-            <span aria-hidden="true">+</span>Novo plano
-          </Button>
+          mayCreatePlan ? (
+            <Button onClick={() => setCreating(true)}>
+              <span aria-hidden="true">+</span>Novo plano
+            </Button>
+          ) : undefined
         }
       />
 
@@ -63,14 +68,16 @@ export function PlansPage() {
               </td>
               <td className="whitespace-nowrap text-muted">{formatDateTime(plan.created_at)}</td>
               <td className="text-right">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-label={`Editar ${plan.name}`}
-                  onClick={() => setEditing(plan)}
-                >
-                  Editar
-                </Button>
+                {mayEditPlan && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Editar ${plan.name}`}
+                    onClick={() => setEditing(plan)}
+                  >
+                    Editar
+                  </Button>
+                )}
               </td>
             </tr>
           ))}
