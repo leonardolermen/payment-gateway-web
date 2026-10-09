@@ -11,5 +11,12 @@ export function safeNext(next: string | null, fallback = "/app/orders"): string 
 
   const url = new URL(next, window.location.origin);
 
-  return url.origin === window.location.origin ? url.pathname + url.search + url.hash : fallback;
+  if (url.origin !== window.location.origin) {
+    return fallback;
+  }
+
+  // Dot segments normalise "/..//evil.com" into "//evil.com": the result itself must start with one slash.
+  const result = url.pathname + url.search + url.hash;
+
+  return /^\/[\\/]/.test(result) ? fallback : result;
 }
