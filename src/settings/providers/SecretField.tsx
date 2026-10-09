@@ -32,7 +32,13 @@ export function SecretField({ id, label, value, onChange, secret, error }: Props
           aria-describedby={error ? `${id}-error` : undefined}
           className={INPUT_CLASSES}
         />
-        <Button variant="ghost" size="sm" onClick={() => setVisible(!visible)}>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={visible ? `Ocultar ${label}` : `Mostrar ${label}`}
+          aria-pressed={visible}
+          onClick={() => setVisible(!visible)}
+        >
           {visible ? "Ocultar" : "Mostrar"}
         </Button>
         <RemoveOrKeep label={label} secret={secret} />

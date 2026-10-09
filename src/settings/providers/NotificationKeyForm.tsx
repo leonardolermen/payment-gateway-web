@@ -1,16 +1,26 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
 import type { Environment } from "../../auth/environment";
-import { messageFor } from "../../support/gatewayError";
+import { GatewayRequestError, messageFor } from "../../support/gatewayError";
 import { Button } from "../../support/ui/Button";
 import { providerKeys, putNotificationKey } from "./providersApi";
 import { SecretField } from "./SecretField";
 
 type Props = { environment: Environment; keySet: boolean };
 
+type KeyErrors = { key?: string; form?: string };
+
+// The gateway names the offending field as `key`; anything else (a 403, the network) is the form's.
+function keyErrors(error: unknown): KeyErrors {
+  const field = error instanceof GatewayRequestError ? error.error.field : undefined;
+
+  return { [field === "key" ? "key" : "form"]: messageFor(error) };
+}
+
 export function NotificationKeyForm({ environment, keySet }: Props) {
   const queryClient = useQueryClient();
   const [key, setKey] = useState("");
+  const [errors, setErrors] = useState<KeyErrors>({});
 
   const save = useMutation({
     mutationFn: () => putNotificationKey(key.trim()),
@@ -18,10 +28,12 @@ export function NotificationKeyForm({ environment, keySet }: Props) {
       setKey("");
       return queryClient.invalidateQueries({ queryKey: providerKeys.overview(environment) });
     },
+    onError: (error) => setErrors(keyErrors(error)),
   });
 
   function submit(event: FormEvent) {
     event.preventDefault();
+    setErrors({});
     save.mutate();
   }
 
@@ -36,11 +48,12 @@ export function NotificationKeyForm({ environment, keySet }: Props) {
         value={key}
         onChange={setKey}
         secret={{ isSet: keySet }}
+        error={errors.key}
       />
 
-      {save.isError && (
+      {errors.form && (
         <p role="alert" className="text-sm text-danger">
-          {messageFor(save.error)}
+          {errors.form}
         </p>
       )}
 
