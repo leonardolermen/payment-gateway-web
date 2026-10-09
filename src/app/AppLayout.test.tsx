@@ -9,12 +9,20 @@ import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
 import { AppLayout } from "./AppLayout";
 
-type Setup = { emailVerified?: boolean; environment?: Environment };
+type Setup = {
+  emailVerified?: boolean;
+  onboardingEmailVerified?: boolean;
+  environment?: Environment;
+};
 
-function renderLayout({ emailVerified = true, environment = "TEST" }: Setup = {}) {
+function renderLayout({
+  emailVerified = true,
+  onboardingEmailVerified,
+  environment = "TEST",
+}: Setup = {}) {
   setAccessToken("gs_test");
   storeEnvironment(environment);
-  mockMe(aMe({ emailVerified }));
+  mockMe(aMe({ emailVerified, onboardingEmailVerified }));
 
   return renderWithProviders(
     [
@@ -86,6 +94,15 @@ describe("AppLayout header", () => {
 
     await screen.findByText("Loja de Dev");
     expect(screen.queryByText(/Confirme seu e-mail para ativar/)).not.toBeInTheDocument();
+  });
+
+  // The person's own flag rules the banner and LIVE; `onboarding` is for the future checklist.
+  it("followsTheUsersOwnVerificationNotTheOnboardingOne", async () => {
+    renderLayout({ emailVerified: true, onboardingEmailVerified: false });
+
+    await screen.findByText("Loja de Dev");
+    expect(screen.queryByText(/Confirme seu e-mail para ativar/)).not.toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "LIVE" })).toBeEnabled();
   });
 
   it("signsOutThroughTheGatewayAndLandsOnLogin", async () => {

@@ -2,10 +2,17 @@ import { http, HttpResponse } from "msw";
 import type { Me, Role } from "../auth/types";
 import { server } from "./msw/server";
 
-type Overrides = { role?: Role; emailVerified?: boolean; name?: string; merchantName?: string };
+type Overrides = {
+  role?: Role;
+  emailVerified?: boolean;
+  onboardingEmailVerified?: boolean;
+  name?: string;
+  merchantName?: string;
+};
 
 export function aMe(overrides: Overrides = {}): Me {
   const emailVerified = overrides.emailVerified ?? true;
+  const onboardingEmailVerified = overrides.onboardingEmailVerified ?? emailVerified;
 
   return {
     user: {
@@ -16,7 +23,10 @@ export function aMe(overrides: Overrides = {}): Me {
       email_verified: emailVerified,
     },
     merchant: { id: "m_1", name: overrides.merchantName ?? "Loja de Dev" },
-    onboarding: { email_verified: emailVerified, live_enabled: emailVerified },
+    onboarding: {
+      email_verified: onboardingEmailVerified,
+      live_enabled: onboardingEmailVerified,
+    },
   };
 }
 

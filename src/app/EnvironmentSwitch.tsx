@@ -15,7 +15,7 @@ const ENVIRONMENTS: Environment[] = ["TEST", "LIVE"];
 export function EnvironmentSwitch({ me }: { me: Me }) {
   const environment = useEnvironment();
   const queryClient = useQueryClient();
-  const isLiveLocked = !me.onboarding.email_verified;
+  const isLiveLocked = !me.user.email_verified;
 
   // A LIVE choice left in storage (another user, or before verification lapsed) must not stick to
   // someone who cannot use it. UX only: the gateway already refuses LIVE with 403 EMAIL_NOT_VERIFIED.

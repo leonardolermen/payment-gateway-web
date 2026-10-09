@@ -6,7 +6,7 @@ import { messageFor } from "../support/gatewayError";
 export function VerifyBanner({ me }: { me: Me }) {
   const resend = useMutation({ mutationFn: resendVerification });
 
-  if (me.onboarding.email_verified) {
+  if (me.user.email_verified) {
     return null;
   }
 
