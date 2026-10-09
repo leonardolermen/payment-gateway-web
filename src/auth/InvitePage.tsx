@@ -2,15 +2,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router";
 import { TextField } from "../customer/TextField";
-import { messageFor } from "../support/gatewayError";
 import { Button } from "../support/ui/Button";
-import { codeOf } from "./authErrors";
+import { codeOf, fieldErrors } from "./authErrors";
 import { AUTH_LINK_CLASSES, AuthShell } from "./AuthShell";
 import { acceptInvite } from "./authApi";
 import { PasswordField } from "./PasswordField";
 
 // Invite outcomes read differently from the generic gateway copy: they tell the invitee what to do.
-const INVITE_FAILURES: Record<string, ReactNode> = {
+const INVITE_COPY: Partial<Record<string, ReactNode>> = {
   TOKEN_EXPIRED: "Convite expirado — peça um novo ao dono da loja.",
   EMAIL_TAKEN: (
     <>
@@ -22,6 +21,10 @@ const INVITE_FAILURES: Record<string, ReactNode> = {
   ),
 };
 
+const FIELD_FOR_CODE = { WEAK_PASSWORD: "password" } as const;
+
+type Errors = { password?: string; form?: ReactNode };
+
 export function InvitePage() {
   const { token = "" } = useParams();
   const navigate = useNavigate();
@@ -29,27 +32,24 @@ export function InvitePage() {
 
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState<string | undefined>();
-  const [failure, setFailure] = useState<ReactNode>(null);
+  const [errors, setErrors] = useState<Errors>({});
   const [isPending, setIsPending] = useState(false);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setIsPending(true);
-    setFailure(null);
-    setPasswordError(undefined);
+    setErrors({});
 
     try {
       await acceptInvite(token, name.trim(), password);
       queryClient.clear();
       navigate("/app/orders", { replace: true });
     } catch (error) {
-      const code = codeOf(error) ?? "";
-      if (code === "WEAK_PASSWORD") {
-        setPasswordError(messageFor(error));
-      } else {
-        setFailure(INVITE_FAILURES[code] ?? messageFor(error));
-      }
+      const routed = fieldErrors(error, FIELD_FOR_CODE);
+      setErrors({
+        password: routed.password,
+        form: routed.form && (INVITE_COPY[codeOf(error) ?? ""] ?? routed.form),
+      });
     } finally {
       setPassword("");
       setIsPending(false);
@@ -59,9 +59,9 @@ export function InvitePage() {
   return (
     <AuthShell title="Aceitar convite">
       <form noValidate onSubmit={submit} className="space-y-4">
-        {failure && (
+        {errors.form && (
           <p role="alert" className="text-sm text-danger">
-            {failure}
+            {errors.form}
           </p>
         )}
         <TextField
@@ -76,7 +76,7 @@ export function InvitePage() {
           label="Senha"
           autoComplete="new-password"
           value={password}
-          error={passwordError}
+          error={errors.password}
           onChange={setPassword}
           showStrength
         />

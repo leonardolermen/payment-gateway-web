@@ -17,7 +17,8 @@ export function ForgotPage() {
     try {
       await forgotPassword(email.trim());
     } catch {
-      // Swallowed on purpose: any answer other than the same copy would say whether the e-mail exists.
+      // Swallowed on purpose, 5xx and network failures included: any answer other than the same copy
+      // would say whether the e-mail exists, and a retry is one click on "Voltar para entrar" away.
     } finally {
       setIsPending(false);
       setWasSent(true);

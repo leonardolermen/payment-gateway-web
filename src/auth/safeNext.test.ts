@@ -3,15 +3,20 @@ import { safeNext } from "./safeNext";
 
 describe("safeNext", () => {
   it("keepsASameOriginPath", () => {
-    expect(safeNext("/app/plans?page=2")).toBe("/app/plans?page=2");
+    expect(safeNext("/app/orders/01X?x=1")).toBe("/app/orders/01X?x=1");
   });
 
-  it("fallsBackWhenMissingOrNotAPath", () => {
-    expect(safeNext(null)).toBe("/app/orders");
-    expect(safeNext("https://evil.com")).toBe("/app/orders");
+  it("fallsBackWhenMissing", () => {
+    expect(safeNext(null, "/app/settings")).toBe("/app/settings");
   });
 
-  it("refusesAProtocolRelativeUrl", () => {
-    expect(safeNext("//evil.com", "/app/settings")).toBe("/app/settings");
+  it.each([
+    "/\\evil.com",
+    "/\t/evil.com",
+    "//evil.com",
+    "javascript:alert(1)",
+    "https://evil.com/x",
+  ])("refusesAnythingThatLeavesTheOrigin %j", (next) => {
+    expect(safeNext(next)).toBe("/app/orders");
   });
 });
