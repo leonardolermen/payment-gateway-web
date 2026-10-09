@@ -1,6 +1,7 @@
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it } from "vitest";
 import { server } from "../test/msw/server";
+import { readEnvironment, storeEnvironment } from "./environment";
 import { clearSession, readAccessToken, setAccessToken } from "./session";
 import { acceptInvite, changeRole, getTeam, invite, login, logout, removeUser } from "./authApi";
 
@@ -22,6 +23,19 @@ describe("authApi", () => {
 
     expect(readAccessToken()).toBe("gs_new");
     expect(credentials).toBe("include");
+  });
+
+  it("everySignInStartsInTest", async () => {
+    storeEnvironment("LIVE");
+    server.use(
+      http.post(`${API}/v1/auth/login`, () =>
+        HttpResponse.json({ access_token: "gs_new", expires_in: 900 }),
+      ),
+    );
+
+    await login({ email: "ana@loja.com", password: "senha-forte-1" });
+
+    expect(readEnvironment()).toBe("TEST");
   });
 
   it("logoutClearsTheSessionEvenIfTheCallFails", async () => {

@@ -2,7 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it } from "vitest";
-import { storeEnvironment, type Environment } from "../auth/environment";
+import { readEnvironment, storeEnvironment, type Environment } from "../auth/environment";
 import { clearSession, setAccessToken } from "../auth/session";
 import { aMe, mockMe } from "../test/me";
 import { server } from "../test/msw/server";
@@ -121,5 +121,21 @@ describe("AppLayout header", () => {
     expect(await screen.findByText("Tela de login")).toBeInTheDocument();
     expect(loggedOut).toBe(true);
     expect(router.state.location.pathname).toBe("/login");
+  });
+
+  it("signingOutLeavesTheNextPersonInTest", async () => {
+    server.use(
+      http.post(
+        "http://localhost:8080/v1/auth/logout",
+        () => new HttpResponse(null, { status: 204 }),
+      ),
+    );
+    renderLayout({ environment: "LIVE" });
+
+    await userEvent.click(await screen.findByRole("button", { name: /Ana Dona/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Sair" }));
+
+    await screen.findByText("Tela de login");
+    expect(readEnvironment()).toBe("TEST");
   });
 });

@@ -1,5 +1,6 @@
 import { request } from "../support/http";
 import { merchantRequest } from "../support/merchantRequest";
+import { storeEnvironment } from "./environment";
 import { clearSession, setAccessToken } from "./session";
 import type { Me, Role, SessionSummary, Team } from "./types";
 
@@ -12,9 +13,12 @@ export const meKeys = {
 type Tokens = { access_token: string; expires_in: number };
 
 // Opens a session: the refresh cookie arrives with the response, the access token stays in memory.
+// Every session starts in TEST: a LIVE choice left by the previous person must not move real money
+// for the next one.
 async function openSession(path: string, body: unknown): Promise<Tokens> {
   const { data } = await request<Tokens>(path, { method: "POST", body, credentials: "include" });
   setAccessToken(data.access_token);
+  storeEnvironment("TEST");
 
   return data;
 }

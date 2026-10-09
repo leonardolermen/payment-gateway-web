@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { logout } from "../auth/authApi";
+import { storeEnvironment } from "../auth/environment";
 import { roleLabel } from "../auth/roleLabels";
 import type { Me } from "../auth/types";
 
@@ -16,6 +17,7 @@ export function UserMenu({ me }: { me: Me }) {
     } finally {
       // The cache belongs to the user that just left, and nothing may keep them on this screen.
       queryClient.clear();
+      storeEnvironment("TEST");
       navigate("/login", { replace: true });
     }
   }

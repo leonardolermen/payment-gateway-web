@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { meKeys } from "../auth/authApi";
@@ -45,5 +46,21 @@ describe("EnvironmentSwitch", () => {
 
     expect(screen.getByRole("radio", { name: "TEST" })).toHaveAttribute("aria-checked", "true");
     expect(readEnvironment()).toBe("TEST");
+  });
+
+  it("theFallbackDropsTheListsCachedUnderLive", async () => {
+    storeEnvironment("LIVE");
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(meKeys.me, aMe({ emailVerified: false }));
+    queryClient.setQueryData(["orders"], []);
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <EnvironmentSwitch me={aMe({ emailVerified: false })} />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() => expect(queryClient.getQueryData(["orders"])).toBeUndefined());
+    expect(queryClient.getQueryData(meKeys.me)).toBeDefined();
   });
 });

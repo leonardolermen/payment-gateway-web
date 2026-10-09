@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type QueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { meKeys } from "../auth/authApi";
 import { readEnvironment, storeEnvironment, type Environment } from "../auth/environment";
@@ -12,6 +12,13 @@ const SELECTED_CLASS: Record<Environment, string> = {
 
 const ENVIRONMENTS: Environment[] = ["TEST", "LIVE"];
 
+function switchTo(queryClient: QueryClient, next: Environment) {
+  storeEnvironment(next);
+  // Cached TEST lists must not show up under LIVE, or the other way round. `me` is the same in
+  // both, and dropping it would unmount the header while it refetches.
+  queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== meKeys.me[0] });
+}
+
 export function EnvironmentSwitch({ me }: { me: Me }) {
   const environment = useEnvironment();
   const queryClient = useQueryClient();
@@ -21,15 +28,12 @@ export function EnvironmentSwitch({ me }: { me: Me }) {
   // someone who cannot use it. UX only: the gateway already refuses LIVE with 403 EMAIL_NOT_VERIFIED.
   useEffect(() => {
     if (isLiveLocked && readEnvironment() === "LIVE") {
-      storeEnvironment("TEST");
+      switchTo(queryClient, "TEST");
     }
-  }, [isLiveLocked]);
+  }, [isLiveLocked, queryClient]);
 
   function choose(next: Environment) {
-    storeEnvironment(next);
-    // Cached TEST lists must not show up under LIVE, or the other way round. `me` is the same in
-    // both, and dropping it would unmount the header while it refetches.
-    queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== meKeys.me[0] });
+    switchTo(queryClient, next);
   }
 
   return (
