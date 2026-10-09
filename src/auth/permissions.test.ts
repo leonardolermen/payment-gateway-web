@@ -6,12 +6,14 @@ describe("can", () => {
     expect(can("READONLY", "create_charge")).toBe(false);
     expect(can("READONLY", "refund")).toBe(false);
     expect(can("READONLY", "team")).toBe(false);
+    expect(can("READONLY", "rotate_checkout_link")).toBe(false);
   });
 
   it("financeOperatesButDoesNotConfigure", () => {
     expect(can("FINANCE", "create_charge")).toBe(true);
     expect(can("FINANCE", "refund")).toBe(true);
     expect(can("FINANCE", "capture")).toBe(true);
+    expect(can("FINANCE", "rotate_checkout_link")).toBe(true);
     expect(can("FINANCE", "create_plan")).toBe(true);
     expect(can("FINANCE", "delete_customer")).toBe(false);
     expect(can("FINANCE", "installments")).toBe(false);

@@ -5,6 +5,7 @@ export type Action =
   | "cancel"
   | "refund"
   | "capture"
+  | "rotate_checkout_link"
   | "create_customer"
   | "delete_customer"
   | "create_plan"
@@ -23,6 +24,8 @@ const MINIMUM: Record<Action, Role> = {
   cancel: "FINANCE",
   refund: "FINANCE",
   capture: "FINANCE",
+  // Rotating kills the link the payer already holds, so it is a write like any other.
+  rotate_checkout_link: "FINANCE",
   create_customer: "FINANCE",
   delete_customer: "OWNER",
   create_plan: "FINANCE",
