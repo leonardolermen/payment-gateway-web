@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
+import { meKeys } from "../../auth/authApi";
 import { setAccessToken } from "../../auth/session";
 import { aMe, mockMe } from "../../test/me";
 import { server } from "../../test/msw/server";
@@ -129,6 +130,17 @@ describe("MyAccountSection", () => {
     expect(screen.getByLabelText("Senha atual")).toHaveValue("");
     expect(screen.getByLabelText("Nova senha")).toHaveValue("");
     expect(screen.getByLabelText("Confirmar nova senha")).toHaveValue("");
+  });
+
+  it("aChangedPasswordRefreshesTheSessionList", async () => {
+    server.use(http.post(`${API}/v1/me/password`, () => new HttpResponse(null, { status: 204 })));
+    const { queryClient } = renderSection();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+
+    await fillPassword("antiga-senha-1", "nova-senha-123", "nova-senha-123");
+
+    await screen.findByText("Senha alterada; as outras sessões foram encerradas.");
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: meKeys.sessions });
   });
 
   it("listsSessionsAndMarksTheCurrentOne", async () => {

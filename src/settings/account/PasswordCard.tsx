@@ -1,5 +1,6 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { changePassword } from "../../auth/authApi";
+import { changePassword, meKeys } from "../../auth/authApi";
 import { PasswordField } from "../../auth/PasswordField";
 import { GatewayRequestError, messageFor } from "../../support/gatewayError";
 import { Button } from "../../support/ui/Button";
@@ -26,6 +27,7 @@ function errorsFor(error: unknown): FieldErrors {
 }
 
 export function PasswordCard() {
+  const queryClient = useQueryClient();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -48,6 +50,8 @@ export function PasswordCard() {
     try {
       await changePassword(current, next);
       setChanged(true);
+      // The gateway ends the other sessions on a password change; the list must stop showing them.
+      void queryClient.invalidateQueries({ queryKey: meKeys.sessions });
     } catch (e) {
       setErrors(errorsFor(e));
     } finally {
