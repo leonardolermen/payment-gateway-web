@@ -134,7 +134,7 @@ describe("MyAccountSection", () => {
   it("listsSessionsAndMarksTheCurrentOne", async () => {
     renderSection();
 
-    const current = (await screen.findByText("Firefox no Linux")).closest("tr")!;
+    const current = (await screen.findByText("Firefox · Linux")).closest("tr")!;
     expect(within(current).getByText("atual")).toBeInTheDocument();
     const other = screen.getByText("10.0.0.2").closest("tr")!;
     expect(within(other).getByText("—")).toBeInTheDocument();
@@ -151,7 +151,7 @@ describe("MyAccountSection", () => {
     );
     renderSection();
 
-    await screen.findByText("Firefox no Linux");
+    await screen.findByText("Firefox · Linux");
     await userEvent.click(screen.getByRole("button", { name: "Encerrar as outras sessões" }));
     expect(revoked).toBe(false);
     const dialog = screen.getByRole("dialog");

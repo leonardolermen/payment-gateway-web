@@ -8,6 +8,7 @@ import { Badge } from "../../support/ui/Badge";
 import { Button } from "../../support/ui/Button";
 import { Card } from "../../support/ui/Card";
 import { Table } from "../../support/ui/Table";
+import { deviceLabel } from "./deviceLabel";
 
 const HEADERS = ["Dispositivo", "IP", "Criado em", "Último uso"];
 
@@ -42,7 +43,9 @@ export function SessionsCard() {
         {sessions.data?.map((session) => (
           <tr key={session.id}>
             <td>
-              <span className="mr-2">{session.user_agent ?? "—"}</span>
+              <span className="mr-2" title={session.user_agent ?? undefined}>
+                {deviceLabel(session.user_agent)}
+              </span>
               {session.current && <Badge tone="ok">atual</Badge>}
             </td>
             <td>{session.ip ?? "—"}</td>
