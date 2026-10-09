@@ -1,5 +1,11 @@
 import { createBrowserRouter, Navigate } from "react-router";
+import { ForgotPage } from "../auth/ForgotPage";
+import { InvitePage } from "../auth/InvitePage";
+import { LoginPage } from "../auth/LoginPage";
 import { RequireSession } from "../auth/RequireSession";
+import { ResetPage } from "../auth/ResetPage";
+import { SignupPage } from "../auth/SignupPage";
+import { VerifyPage } from "../auth/VerifyPage";
 import { PayPage } from "../checkout/PayPage";
 import { CustomersPage } from "../customer/CustomersPage";
 import { NewCustomerPage } from "../customer/NewCustomerPage";
@@ -12,6 +18,12 @@ import { AppLayout } from "./AppLayout";
 export const router = createBrowserRouter([
   { path: "/", element: <Navigate to="/app/orders" replace /> },
   { path: "/app/login", element: <Navigate to="/login" replace /> },
+  { path: "/login", element: <LoginPage /> },
+  { path: "/signup", element: <SignupPage /> },
+  { path: "/forgot", element: <ForgotPage /> },
+  { path: "/reset/:token", element: <ResetPage /> },
+  { path: "/verify/:token", element: <VerifyPage /> },
+  { path: "/invite/:token", element: <InvitePage /> },
   {
     path: "/app",
     element: <RequireSession />,
