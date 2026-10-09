@@ -6,6 +6,7 @@ type Init = {
   body?: unknown;
   headers?: Record<string, string>;
   apiKey?: string;
+  credentials?: "include";
   idempotencyKey?: string;
 };
 
@@ -30,6 +31,7 @@ export async function request<T>(
     response = await fetch(API_BASE + path, {
       method: init.method ?? "GET",
       headers,
+      credentials: init.credentials,
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
     });
   } catch {

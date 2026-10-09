@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 import { merchantRequest } from "../support/merchantRequest";
 import { renderWithProviders } from "../test/render";
 import { server } from "../test/msw/server";
-import { readApiKey, storeApiKey } from "./apiKey";
+import { storeApiKey } from "./apiKey";
+import { readAccessToken, setAccessToken } from "./session";
 import { RequireApiKey } from "./RequireApiKey";
 
 function Login() {
@@ -46,9 +47,16 @@ describe("RequireApiKey", () => {
     expect(screen.getByText("conteudo")).toBeInTheDocument();
   });
 
-  it("clears the key and redirects when a request gets a 401", async () => {
+  it("clears the session and redirects when a request gets a 401 and the refresh fails", async () => {
     storeApiKey("gk_test_abc");
+    setAccessToken("gs_test");
     server.use(
+      http.post("http://localhost:8080/v1/auth/refresh", () =>
+        HttpResponse.json(
+          { type: "urn:gateway:SESSION_EXPIRED", status: 401, detail: "x" },
+          { status: 401 },
+        ),
+      ),
       http.get("http://localhost:8080/v1/orders", () =>
         HttpResponse.json(
           { type: "urn:gateway:UNAUTHENTICATED", status: 401, detail: "x" },
@@ -59,7 +67,7 @@ describe("RequireApiKey", () => {
     renderWithProviders(routesFor(<Caller />), { initialEntries: ["/app/orders"] });
 
     expect(await screen.findByTestId("login")).toHaveTextContent("/app/login?next=%2Fapp%2Forders");
-    expect(readApiKey()).toBeNull();
+    expect(readAccessToken()).toBeNull();
   });
 
   it("drops the cached data of the previous key on a 401", async () => {
