@@ -53,6 +53,8 @@ O token de acesso vai no header `Authorization: Bearer` e o ambiente (teste ou p
 - O cookie de refresh `gw_refresh` é do navegador (HttpOnly): o JavaScript do painel não o lê. Qualquer
   401 sem refresh possível e o logout apagam o token e o cache de consultas juntos.
 - O ambiente escolhido vai em `X-Environment` a cada requisição; nenhuma chave de API passa pelo navegador.
+  Todo login, cadastro ou convite aceito começa em TEST, e sair também volta para TEST: a escolha de
+  produção de quem saiu não passa para quem entra.
 - Papéis. O painel esconde o que o papel não pode fazer; o botão não é desabilitado, ele não existe na
   tela. Isso é só conforto: a API aplica a mesma tabela e nunca confia menos por causa disso
   (`src/auth/permissions.ts`).
@@ -61,8 +63,10 @@ O token de acesso vai no header `Authorization: Bearer` e o ambiente (teste ou p
   | --------------------------------------------------------------------------------------------- | :--: | :--------: | :-----: |
   | Ver cobranças, clientes, planos e configurações                                               | sim  |    sim     |   sim   |
   | Criar, cancelar e reembolsar cobranças; criar cliente; criar e editar plano; criar assinatura | sim  |    sim     |   não   |
-  | Excluir cliente                                                                               | sim  |    não     |   não   |
-  | Webhooks, chaves de API, provedores, parcelamento, equipe e loja                              | sim  |    não     |   não   |
+
+| Gerar novo link de pagamento (invalida o link que o pagador já tem) | sim | sim | não |
+| Excluir cliente | sim | não | não |
+| Webhooks, chaves de API, provedores, parcelamento, equipe e loja | sim | não | não |
 
 - Os campos do cartão são zerados antes de qualquer envio e nunca vão para storage, cache nem URL
   (coberto por `src/checkout/cardDataNeverPersists.test.tsx`).
