@@ -107,7 +107,11 @@ export function CredentialForm({
         <Button type="submit" disabled={save.isPending}>
           Salvar credenciais
         </Button>
-        {save.isSuccess && <span className="text-sm text-ok-fg">Credenciais salvas</span>}
+        {save.isSuccess && (
+          <span role="status" className="text-sm text-ok-fg">
+            Credenciais salvas
+          </span>
+        )}
       </div>
     </form>
   );

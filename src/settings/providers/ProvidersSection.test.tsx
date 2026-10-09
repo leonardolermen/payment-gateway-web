@@ -1,4 +1,4 @@
-import { act, screen } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
@@ -79,7 +79,74 @@ describe("ProvidersSection", () => {
     serve(() => anOverview({ inbound_webhook_url: null }));
     renderSection();
 
-    expect(await screen.findByText(/porta mTLS 0/)).toBeInTheDocument();
+    expect(
+      await screen.findByText("Webhook de entrada desligado neste gateway."),
+    ).toBeInTheDocument();
+  });
+
+  it("dropsTheDraftWhenTheEnvironmentChanges", async () => {
+    const user = userEvent.setup();
+    serve((environment) =>
+      anOverview({
+        environment: environment === "LIVE" ? "LIVE" : "TEST",
+        providers: [aProviderStatus({ fields: { client_id: "stored-id" } })],
+      }),
+    );
+    renderSection();
+    await screen.findByLabelText("Client ID");
+    // Both environments cached first: a cold switch shows "Carregando…", which unmounts the forms
+    // on its own and would let the test pass without the environment key.
+    act(() => storeEnvironment("LIVE"));
+    await screen.findByLabelText("Certificado (.pem)");
+    act(() => storeEnvironment("TEST"));
+    await waitFor(() =>
+      expect(screen.queryByLabelText("Certificado (.pem)")).not.toBeInTheDocument(),
+    );
+
+    const clientId = screen.getByLabelText("Client ID");
+    await user.type(screen.getByLabelText("Client secret"), "s3cret");
+    await user.clear(clientId);
+    await user.type(clientId, "draft-id");
+    expect(screen.getByLabelText("Client ID")).toHaveValue("draft-id");
+
+    act(() => storeEnvironment("LIVE"));
+    await screen.findByLabelText("Certificado (.pem)");
+    act(() => storeEnvironment("TEST"));
+    await waitFor(() =>
+      expect(screen.queryByLabelText("Certificado (.pem)")).not.toBeInTheDocument(),
+    );
+
+    expect(screen.getByLabelText("Client secret")).toHaveValue("");
+    expect(screen.getByLabelText("Client ID")).toHaveValue("stored-id");
+  });
+
+  it("refreshesTheBadgeAfterAProbe", async () => {
+    const user = userEvent.setup();
+    let probed = false;
+    serve(() =>
+      anOverview({
+        providers: [
+          aProviderStatus({
+            configured: true,
+            updated_at: CHECKED,
+            last_test: probed ? { ok: true, detail: "Conectado", checked_at: CHECKED } : null,
+          }),
+        ],
+      }),
+    );
+    server.use(
+      http.post(`${API}/v1/merchant/providers/ITAU/test`, () => {
+        probed = true;
+        return HttpResponse.json({ ok: true, detail: "Conectado", checked_at: CHECKED });
+      }),
+    );
+    renderSection();
+    expect(await screen.findByText("Configurado, não testado")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Testar conexão" }));
+
+    expect(await screen.findByText(`Conectado em ${formatDateTime(CHECKED)}`)).toBeInTheDocument();
+    expect(screen.queryByText("Configurado, não testado")).not.toBeInTheDocument();
   });
 
   it("refetchesWithTheNewEnvironmentAndShowsLiveFields", async () => {

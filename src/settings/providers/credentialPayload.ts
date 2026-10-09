@@ -18,8 +18,9 @@ export function initialValues(
 
 /**
  * The gateway merges only secrets: a public field absent from the PUT is dropped from the stored
- * credential. So every public value goes on every save, while a secret goes only when typed (or as
- * "" when the merchant asked to remove it) — a blank secret means "keep what is stored".
+ * credential. So a filled public field goes on every save and a blank one is left out, which clears
+ * it on the gateway; a secret goes only when typed (or as "" when the merchant asked to remove it) —
+ * a blank secret means "keep what is stored".
  */
 export function credentialPayload(
   specs: FieldSpec[],

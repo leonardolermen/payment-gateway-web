@@ -26,7 +26,7 @@ export function WebhookUrlCard({ url }: { url: string | null }) {
       <h3 className="font-semibold">Webhook de entrada</h3>
       {url === null ? (
         <p className="text-sm text-muted">
-          O webhook de entrada está desligado neste gateway (porta mTLS 0).
+          Webhook de entrada desligado neste gateway.
         </p>
       ) : (
         <>
@@ -37,6 +37,12 @@ export function WebhookUrlCard({ url }: { url: string | null }) {
             <Button variant="ghost" size="sm" onClick={() => copy(url)}>
               {copied ? "Copiado" : "Copiar"}
             </Button>
+            {/* The button label alone is not announced when it changes; the live region is. */}
+            {copied && (
+              <span role="status" className="sr-only">
+                Copiado
+              </span>
+            )}
           </div>
           <p className="text-xs text-muted">
             Cadastre esta URL no portal do Itaú para receber as notificações de Pix e boleto.

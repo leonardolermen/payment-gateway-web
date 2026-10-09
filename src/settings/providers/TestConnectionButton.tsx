@@ -42,7 +42,7 @@ export function TestConnectionButton({ provider, environment, configured }: Prop
       </Button>
 
       {outcome && (
-        <span className="text-sm">
+        <span role="status" className="text-sm">
           <span className={outcome.ok ? "text-ok-fg" : "text-danger"}>
             {outcome.ok ? "✓" : "✕"} {outcome.detail}
           </span>{" "}

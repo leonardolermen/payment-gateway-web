@@ -61,7 +61,11 @@ export function NotificationKeyForm({ environment, keySet }: Props) {
         <Button type="submit" variant="ghost" disabled={save.isPending || key.trim() === ""}>
           Salvar chave
         </Button>
-        {save.isSuccess && <span className="text-sm text-ok-fg">Chave salva</span>}
+        {save.isSuccess && (
+          <span role="status" className="text-sm text-ok-fg">
+            Chave salva
+          </span>
+        )}
       </div>
     </form>
   );
