@@ -1,9 +1,8 @@
-import { useMutation } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { useEnvironment } from "../../app/useEnvironment";
-import { resendVerification } from "../../auth/authApi";
 import type { Environment } from "../../auth/environment";
 import { useMe } from "../../auth/useMe";
+import { useResendVerification } from "../../auth/useResendVerification";
 import { messageFor } from "../../support/gatewayError";
 import { Badge, type BadgeTone } from "../../support/ui/Badge";
 import { Button } from "../../support/ui/Button";
@@ -27,7 +26,7 @@ function Entry({ term, children }: { term: string; children: ReactNode }) {
 export function StoreSection() {
   const me = useMe();
   const environment = useEnvironment();
-  const resend = useMutation({ mutationFn: resendVerification });
+  const resend = useResendVerification();
 
   const user = me.data?.user;
 
@@ -53,12 +52,12 @@ export function StoreSection() {
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="ghost"
-                  onClick={() => resend.mutate()}
-                  disabled={resend.isPending || resend.isSuccess}
+                  onClick={resend.send}
+                  disabled={resend.status === "pending" || resend.status === "sent"}
                 >
-                  {resend.isSuccess ? "Enviado" : "Reenviar e-mail"}
+                  {resend.status === "sent" ? "Enviado" : "Reenviar e-mail"}
                 </Button>
-                {resend.isError && (
+                {resend.status === "error" && (
                   <span role="alert" className="text-sm text-danger">
                     {messageFor(resend.error)}
                   </span>

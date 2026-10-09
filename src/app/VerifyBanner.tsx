@@ -1,10 +1,9 @@
-import { useMutation } from "@tanstack/react-query";
-import { resendVerification } from "../auth/authApi";
+import { useResendVerification } from "../auth/useResendVerification";
 import type { Me } from "../auth/types";
 import { messageFor } from "../support/gatewayError";
 
 export function VerifyBanner({ me }: { me: Me }) {
-  const resend = useMutation({ mutationFn: resendVerification });
+  const resend = useResendVerification();
 
   if (me.user.email_verified) {
     return null;
@@ -16,13 +15,17 @@ export function VerifyBanner({ me }: { me: Me }) {
         <span>Confirme seu e-mail para ativar o ambiente de produção.</span>
         <button
           type="button"
-          onClick={() => resend.mutate()}
-          disabled={resend.isPending || resend.isSuccess}
+          onClick={resend.send}
+          disabled={resend.status === "pending" || resend.status === "sent"}
           className="font-semibold underline disabled:no-underline"
         >
-          {resend.isSuccess ? "Enviado" : "Reenviar e-mail"}
+          {resend.status === "sent" ? "Enviado" : "Reenviar e-mail"}
         </button>
-        {resend.isError && <span role="alert">{messageFor(resend.error)}</span>}
+        {resend.status === "error" && (
+          <span role="alert" className="text-danger">
+            {messageFor(resend.error)}
+          </span>
+        )}
       </div>
     </div>
   );
