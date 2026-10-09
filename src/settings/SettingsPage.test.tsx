@@ -1,8 +1,11 @@
 import { screen } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { setAccessToken } from "../auth/session";
 import type { Role } from "../auth/types";
+import { anOverview } from "../test/fixtures/providers";
 import { aMe, mockMe } from "../test/me";
+import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
 import { SettingsPage } from "./SettingsPage";
 
@@ -23,7 +26,13 @@ describe("SettingsPage", () => {
   it("anOwnerSeesEveryTab", async () => {
     renderAs("OWNER");
 
-    expect(await tabNames()).toEqual(["Conta", "Minha conta", "Parcelamento", "Equipe"]);
+    expect(await tabNames()).toEqual([
+      "Conta",
+      "Minha conta",
+      "Parcelamento",
+      "Provedores",
+      "Equipe",
+    ]);
   });
 
   it.each<Role>(["FINANCE", "READONLY"])("%sSeesOnlyTheAccountTabs", async (role) => {
@@ -40,6 +49,35 @@ describe("SettingsPage", () => {
       "true",
     );
     expect(await screen.findByText("Loja de Dev")).toBeInTheDocument();
+  });
+
+  it.each<Role>(["FINANCE", "READONLY"])(
+    "%sDeepLinkingToProvedoresFallsBackToConta",
+    async (role) => {
+      renderAs(role, "/app/settings?tab=providers");
+
+      expect(await screen.findByRole("tab", { name: "Conta" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+      expect(screen.queryByRole("tab", { name: "Provedores" })).not.toBeInTheDocument();
+      expect(await screen.findByText("Loja de Dev")).toBeInTheDocument();
+    },
+  );
+
+  it("anOwnerDeepLinksToProvedores", async () => {
+    server.use(
+      http.get("http://localhost:8080/v1/merchant/providers", () =>
+        HttpResponse.json(anOverview()),
+      ),
+    );
+    renderAs("OWNER", "/app/settings?tab=providers");
+
+    expect(await screen.findByRole("tab", { name: "Provedores" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(await screen.findByText("Pix e boleto · Itaú")).toBeInTheDocument();
   });
 
   it("deepLinksToConta", async () => {

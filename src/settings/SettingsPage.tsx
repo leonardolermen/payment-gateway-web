@@ -8,6 +8,7 @@ import { Tabs } from "../support/ui/Tabs";
 import { MyAccountSection } from "./account/MyAccountSection";
 import { StoreSection } from "./account/StoreSection";
 import { InstallmentSettingsForm } from "./InstallmentSettingsForm";
+import { ProvidersSection } from "./providers/ProvidersSection";
 import { TeamSection } from "./team/TeamSection";
 
 type SettingsTab = {
@@ -27,6 +28,12 @@ const TABS: SettingsTab[] = [
     label: "Parcelamento",
     allows: (role) => can(role, "installments"),
     content: <InstallmentSettingsForm />,
+  },
+  {
+    id: "providers",
+    label: "Provedores",
+    allows: (role) => can(role, "providers"),
+    content: <ProvidersSection />,
   },
   {
     id: "team",
