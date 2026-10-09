@@ -1,12 +1,9 @@
 import { useState } from "react";
 import { Outlet, useMatch } from "react-router";
-import { Card } from "../support/ui/Card";
+import { Workspace, WorkspaceEmpty } from "../support/ui/Workspace";
 import { NewOrderForm } from "./NewOrderForm";
 import { OrdersList } from "./OrdersList";
 
-// The panel's home, laid out like the approved mockup: the list and the new-charge form on the
-// left, the selected order on the right. One column below 1024px, with the selected order first so
-// a tap on a row shows it without scrolling past the list.
 export function OrdersWorkspace() {
   const selected = useMatch("/app/orders/:id") !== null;
   // Bumped after a create: a fresh form is a fresh idempotency key, and the next charge starts empty.
@@ -19,27 +16,27 @@ export function OrdersWorkspace() {
   }
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-      <div className="min-w-0 space-y-5">
-        <OrdersList onNewOrder={focusNewOrder} />
-        <NewOrderForm
-          key={formGeneration}
-          onCreated={() => setFormGeneration((generation) => generation + 1)}
-        />
-      </div>
-
-      <div className={`min-w-0 ${selected ? "order-first lg:order-none" : ""}`}>
-        <Outlet />
-      </div>
-    </div>
+    <Workspace
+      selected={selected}
+      left={
+        <>
+          <OrdersList onNewOrder={focusNewOrder} />
+          <NewOrderForm
+            key={formGeneration}
+            onCreated={() => setFormGeneration((generation) => generation + 1)}
+          />
+        </>
+      }
+    >
+      <Outlet />
+    </Workspace>
   );
 }
 
 export function NoOrderSelected() {
   return (
-    // Only beside the list: on a phone it would sit alone under the form.
-    <Card className="hidden text-sm text-muted lg:block">
+    <WorkspaceEmpty>
       Escolha uma cobrança na lista para ver o link, as tentativas e as ações.
-    </Card>
+    </WorkspaceEmpty>
   );
 }

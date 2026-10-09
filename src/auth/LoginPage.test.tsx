@@ -61,6 +61,27 @@ describe("LoginPage", () => {
     expect(window.sessionStorage.getItem(KEY)).toBeNull();
   });
 
+  it("showToggleRevealsTheKeyWithoutChangingIt", async () => {
+    renderWithProviders(routes, { initialEntries: ["/app/login"] });
+    const input = screen.getByLabelText("Chave de API");
+
+    await userEvent.type(input, "gk_test_abc");
+    expect(input).toHaveAttribute("type", "password");
+
+    await userEvent.click(screen.getByRole("button", { name: "Mostrar" }));
+    expect(input).toHaveAttribute("type", "text");
+    expect(input).toHaveValue("gk_test_abc");
+    expect(screen.getByRole("button", { name: "Ocultar" })).toBeInTheDocument();
+  });
+
+  it("explainsWhereTheKeyComesFromAndWhatTheEnvironmentMeans", () => {
+    renderWithProviders(routes, { initialEntries: ["/app/login"] });
+
+    expect(screen.getByRole("heading", { name: "Entrar no painel" })).toBeInTheDocument();
+    expect(screen.getByText(/gk_test_/)).toBeInTheDocument();
+    expect(screen.getByText(/não movem dinheiro/)).toBeInTheDocument();
+  });
+
   it("nextIsHonoured", async () => {
     server.use(http.get("http://localhost:8080/v1/merchant", () => HttpResponse.json(merchant)));
     renderWithProviders(routes, { initialEntries: ["/app/login?next=/app/orders/01X"] });
