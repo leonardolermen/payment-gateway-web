@@ -39,7 +39,7 @@ describe("providersApi", () => {
   it("putNotificationKeySendsTheKey", async () => {
     let body: unknown = null;
     server.use(
-      http.put(`${API}/v1/merchant/providers/cielo/notification-key`, async ({ request }) => {
+      http.put(`${API}/v1/merchant/providers/CIELO/notification-key`, async ({ request }) => {
         body = await request.json();
         return new HttpResponse(null, { status: 204 });
       }),

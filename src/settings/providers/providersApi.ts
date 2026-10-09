@@ -29,7 +29,7 @@ export async function testConnection(id: ProviderId): Promise<ProbeOutcome> {
 }
 
 export async function putNotificationKey(key: string): Promise<void> {
-  await merchantRequest("/v1/merchant/providers/cielo/notification-key", {
+  await merchantRequest("/v1/merchant/providers/CIELO/notification-key", {
     method: "PUT",
     body: { key },
   });
