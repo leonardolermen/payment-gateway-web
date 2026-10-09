@@ -1,7 +1,8 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
+import { meKeys } from "../auth/authApi";
 import { setAccessToken } from "../auth/session";
 import type { Role } from "../auth/types";
 import { aMe } from "../test/me";
@@ -219,15 +220,38 @@ describe("OrderActions idempotency keys", () => {
     expect(keys[1]).not.toBe(keys[0]);
   });
 
-  it("readonlySeesNeitherCancelNorRefundAndNoEmptyBlock", async () => {
+  it("readonlySeesNoCancelButtonAndNoEmptyBlock", () => {
     const { container } = renderActions(anOrder({ status: "OPEN" }), [], "READONLY");
-    renderActions(anOrder({ status: "PAID" }), [paid()], "READONLY");
-
-    await new Promise((resolve) => setTimeout(resolve, 50));
 
     expect(screen.queryByRole("button", { name: "Cancelar cobrança" })).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("readonlySeesNoRefundButtonAndNoEmptyBlock", () => {
+    const { container } = renderActions(anOrder({ status: "PAID" }), [paid()], "READONLY");
+
     expect(screen.queryByRole("button", { name: "Reembolsar" })).not.toBeInTheDocument();
     expect(container).toBeEmptyDOMElement();
+  });
+
+  it("readonlyStillSeesThatARefundIsInFlight", async () => {
+    server.use(
+      http.get(`${API}/orders/ord_00000001/payments`, () => HttpResponse.json([paid()])),
+      http.post(`${API}/payments/pay_00000001/refunds`, () =>
+        HttpResponse.json({ id: "ref_1" }, { status: 202 }),
+      ),
+    );
+    const { queryClient } = renderActions(anOrder({ status: "PAID" }), [paid()]);
+    await userEvent.click(screen.getByRole("button", { name: "Reembolsar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar reembolso" }));
+    await screen.findByText("Reembolso em processamento");
+
+    // The same screen, seen by someone who may only read.
+    act(() => queryClient.setQueryData(meKeys.me, aMe({ role: "READONLY" })));
+
+    expect(screen.getByText("Reembolso em processamento")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reembolsar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancelar cobrança" })).not.toBeInTheDocument();
   });
 
   it("financeSeesCancelAndRefund", async () => {

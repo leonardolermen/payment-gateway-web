@@ -93,7 +93,8 @@ export function OrderActions({ order, attempts }: Props) {
 
   const showCancel = mayCancel && order.status === "OPEN";
   const showRefund = mayRefund && completed !== undefined && refundable > 0 && !locked;
-  const showLocked = mayRefund && locked;
+  // A status, not an action: every role is told why no refund is on offer.
+  const showLocked = locked;
 
   // No empty card for a role that may do none of it.
   if (!showCancel && !showRefund && !showLocked && open === null) {
