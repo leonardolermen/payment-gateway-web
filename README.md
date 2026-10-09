@@ -63,10 +63,9 @@ O token de acesso vai no header `Authorization: Bearer` e o ambiente (teste ou p
   | --------------------------------------------------------------------------------------------- | :--: | :--------: | :-----: |
   | Ver cobranças, clientes, planos e configurações                                               | sim  |    sim     |   sim   |
   | Criar, cancelar e reembolsar cobranças; criar cliente; criar e editar plano; criar assinatura | sim  |    sim     |   não   |
-
-| Gerar novo link de pagamento (invalida o link que o pagador já tem) | sim | sim | não |
-| Excluir cliente | sim | não | não |
-| Webhooks, chaves de API, provedores, parcelamento, equipe e loja | sim | não | não |
+  | Gerar novo link de pagamento (invalida o link que o pagador já tem)                           | sim  |    sim     |   não   |
+  | Excluir cliente                                                                               | sim  |    não     |   não   |
+  | Webhooks, chaves de API, provedores, parcelamento, equipe e loja                              | sim  |    não     |   não   |
 
 - Os campos do cartão são zerados antes de qualquer envio e nunca vão para storage, cache nem URL
   (coberto por `src/checkout/cardDataNeverPersists.test.tsx`).
