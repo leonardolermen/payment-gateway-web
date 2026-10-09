@@ -138,4 +138,21 @@ describe("AppLayout header", () => {
     await screen.findByText("Tela de login");
     expect(readEnvironment()).toBe("TEST");
   });
+
+  it("aFailedLogoutStillClearsTheCacheAndLandsOnLogin", async () => {
+    server.use(
+      http.post(
+        "http://localhost:8080/v1/auth/logout",
+        () => new HttpResponse(null, { status: 500 }),
+      ),
+    );
+    const { router, queryClient } = renderLayout();
+
+    await userEvent.click(await screen.findByRole("button", { name: /Ana Dona/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Sair" }));
+
+    expect(await screen.findByText("Tela de login")).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe("/login");
+    expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
+  });
 });

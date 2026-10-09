@@ -3,7 +3,16 @@ import { afterEach, describe, expect, it } from "vitest";
 import { server } from "../test/msw/server";
 import { readEnvironment, storeEnvironment } from "./environment";
 import { clearSession, readAccessToken, setAccessToken } from "./session";
-import { acceptInvite, changeRole, getTeam, invite, login, logout, removeUser } from "./authApi";
+import {
+  acceptInvite,
+  changePassword,
+  changeRole,
+  getTeam,
+  invite,
+  login,
+  logout,
+  removeUser,
+} from "./authApi";
 
 const API = "http://localhost:8080";
 
@@ -36,6 +45,21 @@ describe("authApi", () => {
     await login({ email: "ana@loja.com", password: "senha-forte-1" });
 
     expect(readEnvironment()).toBe("TEST");
+  });
+
+  it("changePasswordSendsTheNewPasswordAsNew", async () => {
+    let sent: unknown = null;
+    server.use(
+      http.post(`${API}/v1/me/password`, async ({ request }) => {
+        sent = await request.json();
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    setAccessToken("gs_x");
+
+    await changePassword("old", "new");
+
+    expect(sent).toEqual({ current: "old", new: "new" });
   });
 
   it("logoutClearsTheSessionEvenIfTheCallFails", async () => {

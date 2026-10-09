@@ -84,6 +84,27 @@ describe("merchantRequest", () => {
     off();
   });
 
+  it("a401AfterASuccessfulRefreshGoesToLoginWithoutASecondRefresh", async () => {
+    setAccessToken("gs_stale");
+    let refreshCalls = 0;
+    const listener = vi.fn();
+    const off = onUnauthenticated(listener);
+    server.use(
+      http.get(`${API}/v1/orders`, () => expired()),
+      http.post(`${API}/v1/auth/refresh`, () => {
+        refreshCalls += 1;
+        return HttpResponse.json({ access_token: "gs_fresh", expires_in: 900 });
+      }),
+    );
+
+    await expect(merchantRequest("/v1/orders")).rejects.toBeInstanceOf(Unauthenticated);
+
+    expect(refreshCalls).toBe(1);
+    expect(readAccessToken()).toBeNull();
+    expect(listener).toHaveBeenCalledTimes(1);
+    off();
+  });
+
   it("concurrent401sShareOneRefresh", async () => {
     setAccessToken("gs_stale");
     let refreshCalls = 0;
