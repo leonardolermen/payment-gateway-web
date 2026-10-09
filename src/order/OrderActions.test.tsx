@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { setAccessToken } from "../auth/session";
+import type { Role } from "../auth/types";
+import { aMe } from "../test/me";
 import { anOrder, aPayment } from "../test/fixtures/orders";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
@@ -11,11 +13,12 @@ import type { Order, Payment } from "./types";
 
 const API = "http://localhost:8080/v1";
 
-function renderActions(order: Order, attempts: Payment[] = []) {
+function renderActions(order: Order, attempts: Payment[] = [], role: Role = "OWNER") {
   setAccessToken("gs_test");
-  return renderWithProviders([
-    { path: "/", element: <OrderActions order={order} attempts={attempts} /> },
-  ]);
+  return renderWithProviders(
+    [{ path: "/", element: <OrderActions order={order} attempts={attempts} /> }],
+    { me: aMe({ role }) },
+  );
 }
 
 const paid = () => aPayment({ status: "COMPLETED", paid_amount: 4990, refunded_amount: 0 });
@@ -157,7 +160,9 @@ describe("OrderActions idempotency keys", () => {
     server.use(
       http.post(`${API}/payments/pay_00000001/refunds`, ({ request }) => {
         keys.push(request.headers.get("Idempotency-Key"));
-        return keys.length === 1 ? HttpResponse.error() : HttpResponse.json({ id: "ref_1" }, { status: 201 });
+        return keys.length === 1
+          ? HttpResponse.error()
+          : HttpResponse.json({ id: "ref_1" }, { status: 201 });
       }),
     );
     renderActions(anOrder({ status: "PAID" }), [paid()]);
@@ -212,5 +217,22 @@ describe("OrderActions idempotency keys", () => {
 
     await waitFor(() => expect(keys).toHaveLength(2));
     expect(keys[1]).not.toBe(keys[0]);
+  });
+
+  it("readonlySeesNeitherCancelNorRefundAndNoEmptyBlock", async () => {
+    const { container } = renderActions(anOrder({ status: "OPEN" }), [], "READONLY");
+    renderActions(anOrder({ status: "PAID" }), [paid()], "READONLY");
+
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    expect(screen.queryByRole("button", { name: "Cancelar cobrança" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reembolsar" })).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("financeSeesCancelAndRefund", async () => {
+    renderActions(anOrder({ status: "OPEN" }), [], "FINANCE");
+
+    expect(await screen.findByRole("button", { name: "Cancelar cobrança" })).toBeInTheDocument();
   });
 });

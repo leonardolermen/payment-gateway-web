@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { setAccessToken } from "../auth/session";
+import type { Role } from "../auth/types";
+import { aMe } from "../test/me";
 import { anOrder } from "../test/fixtures/orders";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
@@ -11,7 +13,7 @@ import { NoOrderSelected, OrdersWorkspace } from "./OrdersWorkspace";
 
 const ORDERS = "http://localhost:8080/v1/orders";
 
-function renderWorkspace(path = "/app/orders") {
+function renderWorkspace(path = "/app/orders", role: Role = "OWNER") {
   setAccessToken("gs_test");
   return renderWithProviders(
     [
@@ -24,7 +26,7 @@ function renderWorkspace(path = "/app/orders") {
         ],
       },
     ],
-    { initialEntries: [path] },
+    { initialEntries: [path], me: aMe({ role }) },
   );
 }
 
@@ -100,5 +102,16 @@ describe("OrdersWorkspace", () => {
       expect(screen.queryByText("http://localhost:5173/pay/chk_first")).not.toBeInTheDocument(),
     );
     expect(await screen.findByText(/O link só é exibido uma vez/)).toBeInTheDocument();
+  });
+
+  it("readonlySeesTheListAndNoNewOrderForm", async () => {
+    server.use(http.get(ORDERS, () => HttpResponse.json([anOrder()])));
+
+    renderWorkspace("/app/orders", "READONLY");
+
+    expect(await screen.findByRole("heading", { name: "Cobranças" })).toBeInTheDocument();
+    await screen.findByText("R$ 49,90");
+    expect(screen.queryByRole("heading", { name: "Nova cobrança" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Valor")).not.toBeInTheDocument();
   });
 });

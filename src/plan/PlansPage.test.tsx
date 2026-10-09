@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { setAccessToken } from "../auth/session";
+import type { Role } from "../auth/types";
+import { aMe, mockMe } from "../test/me";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
 import { PlansPage } from "./PlansPage";
@@ -20,8 +22,9 @@ const monthly = {
 };
 const old = { ...monthly, id: "pl_2", name: "Antigo", active: false, trial_days: 0 };
 
-function renderPage() {
+function renderPage(role: Role = "OWNER") {
   setAccessToken("gs_test");
+  mockMe(aMe({ role }));
   return renderWithProviders([{ path: "/app/plans", element: <PlansPage /> }], {
     initialEntries: ["/app/plans"],
   });
@@ -83,5 +86,23 @@ describe("PlansPage", () => {
     expect(await screen.findByText("Nenhum plano por aqui.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /Novo plano/ }));
     expect(screen.getByRole("dialog", { name: "Novo plano" })).toBeInTheDocument();
+  });
+
+  it("hidesNewAndEditFromReadonly", async () => {
+    server.use(http.get("http://localhost:8080/v1/plans", () => HttpResponse.json([monthly])));
+    renderPage("READONLY");
+
+    await screen.findByText("Mensal");
+
+    expect(screen.queryByRole("button", { name: /Novo plano/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Editar Mensal" })).not.toBeInTheDocument();
+  });
+
+  it("showsNewAndEditToFinance", async () => {
+    server.use(http.get("http://localhost:8080/v1/plans", () => HttpResponse.json([monthly])));
+    renderPage("FINANCE");
+
+    expect(await screen.findByRole("button", { name: /Novo plano/ })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Editar Mensal" })).toBeInTheDocument();
   });
 });

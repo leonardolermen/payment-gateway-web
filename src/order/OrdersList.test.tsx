@@ -4,21 +4,23 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { setAccessToken } from "../auth/session";
 import { server } from "../test/msw/server";
+import { aMe } from "../test/me";
 import { anOrder } from "../test/fixtures/orders";
 import { renderWithProviders } from "../test/render";
 import { OrdersList } from "./OrdersList";
+import type { Role } from "../auth/types";
 import type { Order } from "./types";
 
 const ORDERS_URL = "http://localhost:8080/v1/orders";
 
-function renderPage(onNewOrder = () => {}) {
+function renderPage(onNewOrder = () => {}, role: Role = "OWNER") {
   setAccessToken("gs_test");
   return renderWithProviders(
     [
       { path: "/app/orders", element: <OrdersList onNewOrder={onNewOrder} /> },
       { path: "/app/orders/:id", element: <OrdersList onNewOrder={onNewOrder} /> },
     ],
-    { initialEntries: ["/app/orders"] },
+    { initialEntries: ["/app/orders"], me: aMe({ role }) },
   );
 }
 
@@ -131,5 +133,21 @@ describe("OrdersList matches the approved mockup", () => {
     expect(screen.getByText("Aberta")).toHaveClass("bg-warn-bg");
     expect(screen.getByText("Expirada")).toHaveClass("bg-neutral-bg");
     expect(screen.getAllByText("R$ 49,90")[0]).toHaveClass("font-display", "font-bold");
+  });
+
+  it("hidesTheNewOrderButtonFromReadonly", async () => {
+    server.use(http.get(ORDERS_URL, () => HttpResponse.json([anOrder()])));
+    renderPage(() => {}, "READONLY");
+
+    await screen.findByText("R$ 49,90");
+
+    expect(screen.queryByRole("button", { name: /Nova cobrança/ })).not.toBeInTheDocument();
+  });
+
+  it("showsTheNewOrderButtonToFinance", async () => {
+    server.use(http.get(ORDERS_URL, () => HttpResponse.json([anOrder()])));
+    renderPage(() => {}, "FINANCE");
+
+    expect(await screen.findByRole("button", { name: /Nova cobrança/ })).toBeInTheDocument();
   });
 });

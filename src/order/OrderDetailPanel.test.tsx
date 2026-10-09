@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { setAccessToken } from "../auth/session";
 import { server } from "../test/msw/server";
 import { anOrder, aPayment } from "../test/fixtures/orders";
+import { aMe } from "../test/me";
 import { renderWithProviders } from "../test/render";
 import { OrderDetailPanel } from "./OrderDetailPanel";
 
@@ -13,6 +14,7 @@ function renderPage() {
   setAccessToken("gs_test");
   return renderWithProviders([{ path: "/app/orders/:id", element: <OrderDetailPanel /> }], {
     initialEntries: ["/app/orders/ord_00000001"],
+    me: aMe({ role: "OWNER" }),
   });
 }
 
