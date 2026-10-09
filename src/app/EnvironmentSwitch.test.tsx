@@ -1,7 +1,8 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
-import { readEnvironment } from "../auth/environment";
+import { describe, expect, it } from "vitest";
+import { meKeys } from "../auth/authApi";
+import { readEnvironment, storeEnvironment } from "../auth/environment";
 import { aMe } from "../test/me";
 import { renderWithProviders } from "../test/render";
 import { EnvironmentSwitch } from "./EnvironmentSwitch";
@@ -24,14 +25,25 @@ describe("EnvironmentSwitch", () => {
 
   it("switchesToLiveAndDropsTheCachedTestData", async () => {
     const { queryClient } = renderSwitch(true);
-    const clear = vi.spyOn(queryClient, "clear");
+    queryClient.setQueryData(meKeys.me, aMe());
+    queryClient.setQueryData(["orders"], []);
 
     await userEvent.click(screen.getByRole("radio", { name: "LIVE" }));
 
     const live = screen.getByRole("radio", { name: "LIVE" });
     expect(readEnvironment()).toBe("LIVE");
-    expect(clear).toHaveBeenCalled();
+    expect(queryClient.getQueryData(["orders"])).toBeUndefined();
+    expect(queryClient.getQueryData(meKeys.me)).toEqual(aMe());
     expect(live).toHaveAttribute("aria-checked", "true");
     expect(live).toHaveClass("bg-ok-bg", "text-ok-fg");
+  });
+
+  it("fallsBackToTestWhenAnUnverifiedUserFindsLiveInStorage", () => {
+    storeEnvironment("LIVE");
+
+    renderSwitch(false);
+
+    expect(screen.getByRole("radio", { name: "TEST" })).toHaveAttribute("aria-checked", "true");
+    expect(readEnvironment()).toBe("TEST");
   });
 });

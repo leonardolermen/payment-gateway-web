@@ -11,16 +11,27 @@ export function UserMenu({ me }: { me: Me }) {
   const navigate = useNavigate();
 
   async function signOut() {
-    await logout();
-    // The cache belongs to the user that just left.
-    queryClient.clear();
-    navigate("/login", { replace: true });
+    try {
+      await logout();
+    } finally {
+      // The cache belongs to the user that just left, and nothing may keep them on this screen.
+      queryClient.clear();
+      navigate("/login", { replace: true });
+    }
   }
 
   return (
-    <div className="relative">
+    <div
+      className="relative"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          setIsOpen(false);
+        }
+      }}
+    >
       <button
         type="button"
+        aria-haspopup="menu"
         aria-expanded={isOpen}
         onClick={() => setIsOpen(!isOpen)}
         className="max-w-40 truncate rounded-pill px-2 py-1 text-xs font-semibold text-muted hover:text-ink"

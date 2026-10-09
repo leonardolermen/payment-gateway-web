@@ -14,8 +14,8 @@ export function RequireSession() {
   );
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { pathname } = useLocation();
-  const loginPath = "/login?next=" + encodeURIComponent(pathname);
+  const { pathname, search } = useLocation();
+  const loginPath = "/login?next=" + encodeURIComponent(pathname + search);
 
   useEffect(() => {
     if (bootstrap !== "pending") {

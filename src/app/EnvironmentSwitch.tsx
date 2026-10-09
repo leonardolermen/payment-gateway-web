@@ -1,5 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { storeEnvironment, type Environment } from "../auth/environment";
+import { useEffect } from "react";
+import { meKeys } from "../auth/authApi";
+import { readEnvironment, storeEnvironment, type Environment } from "../auth/environment";
 import type { Me } from "../auth/types";
 import { useEnvironment } from "./useEnvironment";
 
@@ -15,10 +17,19 @@ export function EnvironmentSwitch({ me }: { me: Me }) {
   const queryClient = useQueryClient();
   const isLiveLocked = !me.onboarding.email_verified;
 
+  // A LIVE choice left in storage (another user, or before verification lapsed) must not stick to
+  // someone who cannot use it. UX only: the gateway already refuses LIVE with 403 EMAIL_NOT_VERIFIED.
+  useEffect(() => {
+    if (isLiveLocked && readEnvironment() === "LIVE") {
+      storeEnvironment("TEST");
+    }
+  }, [isLiveLocked]);
+
   function choose(next: Environment) {
     storeEnvironment(next);
-    // Cached TEST lists must not show up under LIVE, or the other way round.
-    queryClient.clear();
+    // Cached TEST lists must not show up under LIVE, or the other way round. `me` is the same in
+    // both, and dropping it would unmount the header while it refetches.
+    queryClient.removeQueries({ predicate: (query) => query.queryKey[0] !== meKeys.me[0] });
   }
 
   return (
