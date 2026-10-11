@@ -1,10 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type FormEvent } from "react";
-import { messageFor } from "../support/gatewayError";
 import { Button } from "../support/ui/Button";
 import { AddressFieldset } from "./AddressFieldset";
 import { customerKeys, patchCustomer } from "./customerApi";
-import { fieldBinder, invalidFieldOf, type EditableFields } from "./customerForm";
+import {
+  customerFailureMessage,
+  fieldBinder,
+  invalidFieldOf,
+  type EditableFields,
+} from "./customerForm";
 import { TextField } from "./TextField";
 import type { Address, Customer, CustomerPatch } from "./types";
 
@@ -91,7 +95,7 @@ export function EditCustomerForm({ customer, onClose }: Props) {
 
       {save.isError && !invalidField && (
         <p role="alert" className="text-sm text-danger">
-          {messageFor(save.error)}
+          {customerFailureMessage(save.error)}
         </p>
       )}
 

@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { can } from "../auth/permissions";
 import { useMe } from "../auth/useMe";
-import { GatewayRequestError, messageFor } from "../support/gatewayError";
+import { GatewayRequestError } from "../support/gatewayError";
 import { RestartAttempt } from "../support/RestartAttempt";
 import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
@@ -11,7 +11,12 @@ import { PageHeader } from "../support/ui/PageHeader";
 import { useIdempotencyKey } from "../support/useIdempotencyKey";
 import { AddressFieldset } from "./AddressFieldset";
 import { createCustomer, customerKeys } from "./customerApi";
-import { fieldBinder, invalidFieldOf, type CustomerFields } from "./customerForm";
+import {
+  customerFailureMessage,
+  fieldBinder,
+  invalidFieldOf,
+  type CustomerFields,
+} from "./customerForm";
 import { onlyDigits } from "./document";
 import { TextField } from "./TextField";
 import type { NewCustomer } from "./types";
@@ -102,7 +107,7 @@ function NewCustomerForm() {
           {create.isError && !invalidField && (
             <div className="space-y-2">
               <p role="alert" className="text-sm text-danger">
-                {messageFor(create.error)}{" "}
+                {customerFailureMessage(create.error)}{" "}
                 {typeof duplicateId === "string" && <code>{duplicateId}</code>}
               </p>
               <RestartAttempt error={create.error} onRestart={restart} />

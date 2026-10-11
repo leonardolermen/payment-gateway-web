@@ -1,5 +1,5 @@
 import type { ChangeEvent } from "react";
-import { GatewayRequestError } from "../support/gatewayError";
+import { GatewayRequestError, messageFor } from "../support/gatewayError";
 import type { Address } from "./types";
 
 // What the panel may change on a customer; the document is set once, at creation.
@@ -25,12 +25,25 @@ const FIELD_BY_API_NAME: Record<string, keyof CustomerFields> = {
   "customer.address.zip": "zip",
 };
 
+// The gateway sends no `field`: CUSTOMER_INVALID starts its detail with the name of the field
+// ("customer.address.zip must have 8 digits"), and that leading token is all there is to go on.
 export function invalidFieldOf(error: unknown): keyof CustomerFields | undefined {
-  if (!(error instanceof GatewayRequestError) || !error.error.field) {
+  if (!(error instanceof GatewayRequestError) || error.error.code !== "CUSTOMER_INVALID") {
     return undefined;
   }
 
-  return FIELD_BY_API_NAME[error.error.field];
+  const [lead = ""] = error.error.detail.split(" ");
+
+  return FIELD_BY_API_NAME[lead];
+}
+
+// For the form alert: a CUSTOMER_INVALID the form cannot pin on an input still says what is wrong.
+export function customerFailureMessage(error: unknown): string {
+  if (error instanceof GatewayRequestError && error.error.code === "CUSTOMER_INVALID") {
+    return error.error.detail || messageFor(error);
+  }
+
+  return messageFor(error);
 }
 
 // A field error belongs next to its input; the form shows anything else in its alert.

@@ -142,7 +142,6 @@ describe("EditCustomerForm", () => {
           type: "urn:gateway:CUSTOMER_INVALID",
           status: 422,
           detail: "customer.address.zip must have 8 digits",
-          field: "customer.address.zip",
         },
         { status: 422 },
       ),
@@ -183,5 +182,21 @@ describe("EditCustomerForm", () => {
 
     expect(onClose).toHaveBeenCalled();
     expect(bodies).toEqual([]);
+  });
+
+  // The gateway names the field only in the detail; one the form has no input for still shows.
+  it("anInvalidCustomerWithoutAKnownFieldShowsTheDetail", async () => {
+    capturePatch(() =>
+      HttpResponse.json(
+        { type: "urn:gateway:CUSTOMER_INVALID", status: 422, detail: "customer is incomplete" },
+        { status: 422 },
+      ),
+    );
+    renderForm();
+
+    await userEvent.type(screen.getByLabelText("Nome"), " Lima");
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("customer is incomplete");
   });
 });

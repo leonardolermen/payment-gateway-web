@@ -47,7 +47,6 @@ describe("NewCustomerPage", () => {
             type: "urn:gateway:CUSTOMER_INVALID",
             status: 422,
             detail: "customer.document is not a valid CPF or CNPJ",
-            field: "customer.document",
           },
           { status: 422 },
         ),

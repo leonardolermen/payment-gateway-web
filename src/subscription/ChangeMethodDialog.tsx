@@ -4,7 +4,7 @@ import { listCards } from "../customer/cardApi";
 import { customerKeys } from "../customer/customerApi";
 import type { PaymentMethod } from "../order/types";
 import { ConfirmDialog } from "../support/ConfirmDialog";
-import { GatewayRequestError, messageFor } from "../support/gatewayError";
+import { messageFor } from "../support/gatewayError";
 import { SavedCardSelect } from "./SavedCardSelect";
 import { patchSubscription, subscriptionKeys } from "./subscriptionApi";
 import type { Subscription, SubscriptionMethodChange } from "./types";
@@ -16,15 +16,6 @@ const METHODS: { label: string; value: PaymentMethod }[] = [
   { label: "Boleto", value: "BOLECODE" },
   { label: "Cartão", value: "CARD" },
 ];
-
-// The gateway names the field it refused; only the card has an input of its own here.
-function cardFieldError(error: unknown): string | undefined {
-  if (error instanceof GatewayRequestError && error.error.field === "card_id") {
-    return messageFor(error);
-  }
-
-  return undefined;
-}
 
 export function ChangeMethodDialog({ subscription, onClose }: Props) {
   const queryClient = useQueryClient();
@@ -78,9 +69,8 @@ export function ChangeMethodDialog({ subscription, onClose }: Props) {
     change.mutate({ method, card_id: cardChoice });
   }
 
-  const fieldError = cardFieldError(change.error);
-  const cardError = cardMissing ? "Escolha um cartão salvo." : fieldError;
-  const dialogError = change.isError && fieldError === undefined ? messageFor(change.error) : null;
+  const cardError = cardMissing ? "Escolha um cartão salvo." : undefined;
+  const dialogError = change.isError ? messageFor(change.error) : null;
 
   return (
     <ConfirmDialog

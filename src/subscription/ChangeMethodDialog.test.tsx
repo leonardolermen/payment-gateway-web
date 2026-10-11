@@ -104,7 +104,7 @@ describe("ChangeMethodDialog", () => {
     expect(screen.getByRole("button", { name: "Trocar método" })).toBeDisabled();
   });
 
-  it("showsAFieldErrorOnTheCardAndOtherRefusalsOnTheDialog", async () => {
+  it("showsEveryRefusalOnTheDialog", async () => {
     let calls = 0;
     serve([aSavedCard()], () => {
       calls += 1;
@@ -114,7 +114,6 @@ describe("ChangeMethodDialog", () => {
               type: "urn:gateway:CARD_NOT_OWNED_BY_CUSTOMER",
               status: 422,
               detail: "card is not the customer's",
-              field: "card_id",
             },
             { status: 422 },
           )
@@ -134,8 +133,7 @@ describe("ChangeMethodDialog", () => {
     await userEvent.selectOptions(select, "card_00000001");
     await confirm();
 
-    expect(await screen.findByText("Este cartão não é deste cliente.")).toBeInTheDocument();
-    expect(screen.getByLabelText("Cartão salvo")).toHaveAttribute("aria-invalid", "true");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Este cartão não é deste cliente.");
 
     await userEvent.click(screen.getByRole("radio", { name: "Boleto" }));
     await confirm();
