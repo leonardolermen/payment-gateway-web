@@ -8,19 +8,27 @@ import type { Subscription } from "./types";
 
 type Props = { subscription: Subscription; onClose: () => void };
 
-const WHEN: { label: string; atPeriodEnd: boolean; hint: string }[] = [
-  {
-    label: "No fim do período",
-    atPeriodEnd: true,
-    hint: "Ela segue até o fim do período já cobrado e não gera nova fatura.",
-  },
-  { label: "Agora", atPeriodEnd: false, hint: "Ela termina agora, sem esperar o fim do período." },
-];
+type When = { label: string; atPeriodEnd: boolean; hint: string };
+
+const AT_PERIOD_END: When = {
+  label: "No fim do período",
+  atPeriodEnd: true,
+  hint: "Ela segue até o fim do período já cobrado e não gera nova fatura.",
+};
+
+// The gateway cancels the open invoice at the bank before ending the subscription.
+const NOW: When = {
+  label: "Agora",
+  atPeriodEnd: false,
+  hint: "Ela termina agora. A fatura em aberto também é cancelada no banco.",
+};
 
 export function CancelSubscriptionDialog({ subscription, onClose }: Props) {
   const queryClient = useQueryClient();
+  // A cancel already scheduled for the end of the period leaves only "now" to choose.
+  const options = subscription.cancel_at_period_end ? [NOW] : [AT_PERIOD_END, NOW];
   // The end of the period is the default: the payer already paid for it.
-  const [atPeriodEnd, setAtPeriodEnd] = useState(true);
+  const [atPeriodEnd, setAtPeriodEnd] = useState(!subscription.cancel_at_period_end);
 
   // One key until a clear answer, as on create: a lost response is retried, not sent anew.
   const idempotencyKey = useIdempotencyKey();
@@ -53,7 +61,7 @@ export function CancelSubscriptionDialog({ subscription, onClose }: Props) {
         <legend className="pr-2 text-[10px] font-medium tracking-wider text-muted uppercase">
           Quando
         </legend>
-        {WHEN.map((option) => {
+        {options.map((option) => {
           const hintId = `cancel-when-${String(option.atPeriodEnd)}-hint`;
 
           return (

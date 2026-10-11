@@ -5,7 +5,6 @@ import type { Order } from "../order/types";
 import { formatDate } from "../support/dates";
 import { formatBrl } from "../support/money";
 import { Table } from "../support/ui/Table";
-import { ChargeAgainButton } from "./ChargeAgainButton";
 import { InvoiceLinkButton } from "./InvoiceLinkButton";
 import type { Subscription } from "./types";
 
@@ -25,31 +24,11 @@ function periodLabel(invoice: Order): string {
   return `${formatDate(invoice.period.start)} – ${formatDate(invoice.period.end)}`;
 }
 
-function InvoiceActions({ invoice, subscription }: { invoice: Order; subscription: Subscription }) {
-  const mayRotate = useCan("rotate_checkout_link");
-  const mayCharge = useCan("create_charge");
-
-  // Only an open invoice can still be paid; a card on file can be tried again without the payer.
-  if (invoice.status !== "OPEN") {
-    return null;
-  }
-
-  const savedCardId = subscription.method === "CARD" ? subscription.card_id : null;
-
-  return (
-    <div className="flex flex-wrap items-start gap-2">
-      {mayRotate && <InvoiceLinkButton invoice={invoice} subscriptionId={subscription.id} />}
-      {mayCharge && savedCardId !== null && (
-        <ChargeAgainButton invoice={invoice} cardId={savedCardId} />
-      )}
-    </div>
-  );
-}
-
+// No "cobrar de novo": the gateway wants the CVV, card data stays in the checkout; needs a gateway change.
 export function InvoicesTable({ subscription, invoices, failed }: Props) {
   const mayRotate = useCan("rotate_checkout_link");
-  const mayCharge = useCan("create_charge");
-  const hasActions = mayRotate || mayCharge;
+  // Only an open invoice can still be paid, so only it has a link to hand out.
+  const hasActions = mayRotate && (invoices ?? []).some((invoice) => invoice.status === "OPEN");
 
   return (
     <section aria-labelledby="subscription-invoices-title" className="space-y-2">
@@ -81,7 +60,9 @@ export function InvoicesTable({ subscription, invoices, failed }: Props) {
               </td>
               {hasActions && (
                 <td>
-                  <InvoiceActions invoice={invoice} subscription={subscription} />
+                  {invoice.status === "OPEN" && (
+                    <InvoiceLinkButton invoice={invoice} subscriptionId={subscription.id} />
+                  )}
                 </td>
               )}
             </tr>

@@ -1,3 +1,4 @@
+import { brandName } from "../customer/cardLabels";
 import type { SavedCard } from "../customer/types";
 import { Field } from "../support/ui/Field";
 import { INPUT_CLASSES } from "../support/ui/inputClasses";
@@ -14,11 +15,6 @@ type Props = {
   onChange: (cardId: string | null) => void;
   error?: string;
 };
-
-// The API sends the brand upper case ("VISA"); the panel writes it as a name.
-function brandName(brand: string): string {
-  return brand.charAt(0).toUpperCase() + brand.slice(1).toLowerCase();
-}
 
 function savedCardLabel(card: SavedCard): string {
   return `${brandName(card.brand)} final ${card.last4} · ${card.expiry}`;

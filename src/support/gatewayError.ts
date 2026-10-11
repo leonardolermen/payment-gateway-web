@@ -70,7 +70,8 @@ const MESSAGES: Record<string, string> = {
   CUSTOMER_ADDRESS_REQUIRED: "Boleto precisa do endereço do cliente.",
   SUBSCRIPTION_NOT_ACTIVE: "Esta assinatura não está ativa.",
   IDEMPOTENCY_KEY_REUSED:
-    "A tentativa anterior pode ter criado a assinatura. Confira a lista antes de tentar de novo.",
+    "A tentativa anterior pode ter sido registrada. Confira antes de tentar de novo.",
+  IN_PROGRESS: "Ainda processando a tentativa anterior. Aguarde alguns segundos.",
   INVALID_REQUEST: "Requisição inválida.",
   RATE_LIMITED: "Muitas tentativas. Aguarde um instante.",
   EMAIL_TAKEN: "Este e-mail já tem conta.",

@@ -43,6 +43,19 @@ describe("messageFor", () => {
     expect(messageFor(error)).toBe("Este link de pagamento não está mais disponível.");
   });
 
+  // Shared by every write with an Idempotency-Key: the copy names no resource.
+  it.each([
+    [
+      422,
+      "IDEMPOTENCY_KEY_REUSED",
+      "A tentativa anterior pode ter sido registrada. Confira antes de tentar de novo.",
+    ],
+    [409, "IN_PROGRESS", "Ainda processando a tentativa anterior. Aguarde alguns segundos."],
+  ])("translates the idempotency answer %i %s", (status, code, message) => {
+    const error = new GatewayRequestError({ status, code, detail: "x", extras: {} });
+    expect(messageFor(error)).toBe(message);
+  });
+
   it("uses the detail for unknown codes", () => {
     const error = new GatewayRequestError({
       status: 422,

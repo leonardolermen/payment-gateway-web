@@ -394,7 +394,7 @@ describe("NewSubscriptionForm", () => {
     await submit();
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "A tentativa anterior pode ter criado a assinatura. Confira a lista antes de tentar de novo.",
+      "A tentativa anterior pode ter sido registrada. Confira antes de tentar de novo.",
     );
     await submit();
     await waitFor(() => expect(sent).toHaveLength(2));

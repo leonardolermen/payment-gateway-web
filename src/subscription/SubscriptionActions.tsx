@@ -5,10 +5,8 @@ import { CancelSubscriptionDialog } from "./CancelSubscriptionDialog";
 import { ChangeMethodDialog } from "./ChangeMethodDialog";
 import type { Subscription, SubscriptionStatus } from "./types";
 
-// Over for good: nothing left to cancel. An INCOMPLETE one may still be dropped before it starts.
-const CLOSED = new Set<SubscriptionStatus>(["CANCELED", "ENDED", "INCOMPLETE_EXPIRED"]);
-
-// The gateway changes the method only while it bills (409 SUBSCRIPTION_NOT_ACTIVE otherwise).
+// The gateway cancels and changes the method only while it bills (its isBillable); any other
+// status, INCOMPLETE included, answers 409 SUBSCRIPTION_NOT_ACTIVE.
 const BILLABLE = new Set<SubscriptionStatus>(["ACTIVE", "PAST_DUE"]);
 
 type Open = "cancel" | "method" | null;
@@ -18,10 +16,11 @@ export function SubscriptionActions({ subscription }: { subscription: Subscripti
   const mayChangeMethod = useCan("change_subscription_method");
   const [open, setOpen] = useState<Open>(null);
 
-  // Already scheduled to end: the header says so, and a second cancel would only add a 409.
-  const showCancel =
-    mayCancel && !CLOSED.has(subscription.status) && !subscription.cancel_at_period_end;
-  const showChangeMethod = mayChangeMethod && BILLABLE.has(subscription.status);
+  const billable = BILLABLE.has(subscription.status);
+  const showCancel = mayCancel && billable;
+  const showChangeMethod = mayChangeMethod && billable;
+  // Already scheduled for the end of the period (the header says so): only "now" is left.
+  const cancelLabel = subscription.cancel_at_period_end ? "Cancelar agora" : "Cancelar assinatura";
 
   if (!showCancel && !showChangeMethod && open === null) {
     return null;
@@ -37,7 +36,7 @@ export function SubscriptionActions({ subscription }: { subscription: Subscripti
 
       {showCancel && (
         <Button variant="danger-ghost" size="sm" onClick={() => setOpen("cancel")}>
-          Cancelar assinatura
+          {cancelLabel}
         </Button>
       )}
 

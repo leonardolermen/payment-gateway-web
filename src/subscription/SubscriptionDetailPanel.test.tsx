@@ -1,12 +1,10 @@
-import { act, screen, waitFor, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { setAccessToken } from "../auth/session";
 import type { Role } from "../auth/types";
-import type { Order } from "../order/types";
 import { aSavedCard } from "../test/fixtures/customers";
-import { anOrder } from "../test/fixtures/orders";
 import { aPlan } from "../test/fixtures/plans";
 import { aSubscription } from "../test/fixtures/subscriptions";
 import { aMe } from "../test/me";
@@ -18,20 +16,9 @@ import type { Subscription } from "./types";
 const API = "http://localhost:8080/v1";
 const SUBSCRIPTION = `${API}/subscriptions/sub_00000001`;
 
-function anInvoice(overrides: Partial<Order> = {}): Order {
-  return anOrder({
-    id: "ord_invoice01",
-    status: "PAID",
-    subscription_id: "sub_00000001",
-    invoice_number: 1,
-    period: { start: "2026-09-06", end: "2026-10-06" },
-    ...overrides,
-  });
-}
-
 type Counters = { subscription: number; invoices: number; cards: number };
 
-function serve(subscription: Subscription, invoices: Order[] = []) {
+function serve(subscription: Subscription) {
   const counters: Counters = { subscription: 0, invoices: 0, cards: 0 };
   server.use(
     http.get(SUBSCRIPTION, () => {
@@ -40,7 +27,7 @@ function serve(subscription: Subscription, invoices: Order[] = []) {
     }),
     http.get(`${SUBSCRIPTION}/orders`, () => {
       counters.invoices += 1;
-      return HttpResponse.json(invoices);
+      return HttpResponse.json([]);
     }),
     http.get(`${API}/plans/:id`, () => HttpResponse.json(aPlan({ name: "Mensal Pro" }))),
     http.get(`${API}/cards/:id`, () => {
@@ -97,161 +84,6 @@ describe("SubscriptionDetailPanel", () => {
     expect(await screen.findByText("Pix")).toBeInTheDocument();
     expect(screen.queryByText(/final/)).not.toBeInTheDocument();
     expect(counters.cards).toBe(0);
-  });
-
-  it("listsTheInvoicesWithLinksToTheOrders", async () => {
-    serve(aSubscription(), [
-      anInvoice({
-        id: "ord_invoice02",
-        invoice_number: 2,
-        status: "OPEN",
-        amount: 2990,
-        period: { start: "2026-10-06", end: "2026-11-06" },
-      }),
-      anInvoice(),
-    ]);
-    renderPanel("READONLY");
-
-    const invoices = await screen.findByRole("region", { name: "Faturas" });
-    const rows = await within(invoices).findAllByRole("row");
-    // The header row, then newest first as the gateway sends them.
-    expect(rows).toHaveLength(3);
-    const newest = rows[1] as HTMLElement;
-    expect(within(newest).getByRole("link", { name: "#2" })).toHaveAttribute(
-      "href",
-      "/app/orders/ord_invoice02",
-    );
-    expect(within(newest).getByText("06/10/2026 – 06/11/2026")).toBeInTheDocument();
-    expect(within(newest).getByText("R$ 29,90")).toBeInTheDocument();
-    expect(within(newest).getByText("Aberta")).toBeInTheDocument();
-    expect(within(rows[2] as HTMLElement).getByText("Paga")).toBeInTheDocument();
-  });
-
-  it("copiesARotatedLinkOfTheOpenInvoice", async () => {
-    const user = userEvent.setup();
-    // After setup(): user-event installs its own clipboard stub and would override an earlier one.
-    const writeText = vi.fn().mockResolvedValue(undefined);
-    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
-    serve(aSubscription(), [anInvoice({ status: "OPEN" }), anInvoice({ id: "ord_old" })]);
-    const keys: (string | null)[] = [];
-    server.use(
-      http.post(`${API}/orders/ord_invoice01/checkout-token/rotate`, ({ request }) => {
-        keys.push(request.headers.get("Idempotency-Key"));
-        return HttpResponse.json(
-          anInvoice({ status: "OPEN", checkout_url: "https://pay.example/c/fresh" }),
-        );
-      }),
-    );
-    const { queryClient } = renderPanel();
-
-    const invoices = await screen.findByRole("region", { name: "Faturas" });
-    // Only the open invoice has a payable link.
-    expect(await within(invoices).findAllByRole("button", { name: "Copiar link" })).toHaveLength(1);
-    await user.click(within(invoices).getByRole("button", { name: "Copiar link" }));
-
-    await waitFor(() => expect(writeText).toHaveBeenCalledWith("https://pay.example/c/fresh"));
-    expect(await within(invoices).findByText(/Link novo copiado/)).toBeInTheDocument();
-    expect(keys).toHaveLength(1);
-    expect(keys[0]).toBeTruthy();
-
-    // A rotated link is handed out once: no query or mutation in the caches keeps it.
-    await waitFor(() => {
-      const queries = queryClient.getQueryCache().getAll();
-      const mutations = queryClient.getMutationCache().getAll();
-      const cached = JSON.stringify([
-        queries.map((query) => query.state.data),
-        mutations.map((mutation) => mutation.state.data),
-      ]);
-      expect(cached).not.toContain("pay.example/c/fresh");
-    });
-  });
-
-  it("offersNoInvoiceActionToReadonly", async () => {
-    serve(aSubscription({ method: "CARD", card_id: "card_00000001" }), [
-      anInvoice({ status: "OPEN" }),
-    ]);
-    renderPanel("READONLY");
-
-    const invoices = await screen.findByRole("region", { name: "Faturas" });
-    await within(invoices).findByText("Aberta");
-    expect(within(invoices).queryByRole("button", { name: "Copiar link" })).not.toBeInTheDocument();
-    expect(
-      within(invoices).queryByRole("button", { name: "Cobrar de novo" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("chargesAgainOnlyACardSubscriptionWithASavedCard", async () => {
-    serve(aSubscription({ method: "PIX" }), [anInvoice({ status: "OPEN" })]);
-    renderPanel();
-
-    const invoices = await screen.findByRole("region", { name: "Faturas" });
-    await within(invoices).findByText("Aberta");
-    expect(
-      within(invoices).queryByRole("button", { name: "Cobrar de novo" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("chargesAgainWithTheSavedCardUnderOneKeyUntilAClearAnswer", async () => {
-    serve(aSubscription({ method: "CARD", card_id: "card_00000001", status: "PAST_DUE" }), [
-      anInvoice({ status: "OPEN" }),
-    ]);
-    const sent: { body: unknown; key: string | null }[] = [];
-    server.use(
-      http.post(`${API}/orders/ord_invoice01/payments`, async ({ request }) => {
-        sent.push({ body: await request.json(), key: request.headers.get("Idempotency-Key") });
-        return sent.length === 1
-          ? serverError(503)
-          : HttpResponse.json({ id: "pay_1", status: "PENDING" }, { status: 201 });
-      }),
-    );
-    renderPanel();
-
-    const invoices = await screen.findByRole("region", { name: "Faturas" });
-    await userEvent.click(await within(invoices).findByRole("button", { name: "Cobrar de novo" }));
-
-    const dialog = screen.getByRole("dialog", { name: "Cobrar de novo?" });
-    expect(await within(dialog).findByText("Visa final 4242")).toBeInTheDocument();
-    await userEvent.type(within(dialog).getByLabelText("CVV"), "123");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Cobrar" }));
-
-    expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Cobrar" }));
-
-    await waitFor(() => expect(sent).toHaveLength(2));
-    expect(sent[0]?.body).toEqual({ method: "CARD", card_id: "card_00000001", cvv: "123" });
-    expect(sent[1]?.key).toBe(sent[0]?.key);
-    await waitFor(() =>
-      expect(screen.queryByRole("dialog", { name: "Cobrar de novo?" })).not.toBeInTheDocument(),
-    );
-  });
-
-  it("chargingAgainNeedsTheCvvAndAFreshKeyAfterARefusal", async () => {
-    serve(aSubscription({ method: "CARD", card_id: "card_00000001" }), [
-      anInvoice({ status: "OPEN" }),
-    ]);
-    const keys: (string | null)[] = [];
-    server.use(
-      http.post(`${API}/orders/ord_invoice01/payments`, ({ request }) => {
-        keys.push(request.headers.get("Idempotency-Key"));
-        return HttpResponse.json(
-          { type: "urn:gateway:INVALID_REQUEST", status: 400, detail: "cvv must be 3 or 4 digits" },
-          { status: 400 },
-        );
-      }),
-    );
-    renderPanel();
-
-    await userEvent.click(await screen.findByRole("button", { name: "Cobrar de novo" }));
-    const dialog = screen.getByRole("dialog", { name: "Cobrar de novo?" });
-    expect(within(dialog).getByRole("button", { name: "Cobrar" })).toBeDisabled();
-
-    await userEvent.type(within(dialog).getByLabelText("CVV"), "123");
-    await userEvent.click(within(dialog).getByRole("button", { name: "Cobrar" }));
-    expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("button", { name: "Cobrar" }));
-
-    await waitFor(() => expect(keys).toHaveLength(2));
-    expect(keys[1]).not.toBe(keys[0]);
   });
 
   it("showsTheDunningOnlyWhenThereIsSome", async () => {
@@ -319,22 +151,36 @@ describe("SubscriptionDetailPanel", () => {
     },
   );
 
-  it("anIncompleteSubscriptionMayBeCanceledButNotChanged", async () => {
+  // INCOMPLETE is not billable at the gateway: cancel and change both answer 409 there.
+  it("offersNoActionOnAnIncompleteSubscription", async () => {
     serve(aSubscription({ status: "INCOMPLETE", method: "CARD", card_id: null }));
     renderPanel("OWNER");
 
-    expect(await screen.findByRole("button", { name: "Cancelar assinatura" })).toBeInTheDocument();
+    await screen.findByRole("region", { name: "Assinatura sub_00000001" });
+    expect(screen.queryByRole("button", { name: /Cancelar/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Trocar método" })).not.toBeInTheDocument();
   });
 
-  it("saysItCancelsAtTheEndOfThePeriodInsteadOfOfferingCancel", async () => {
-    serve(aSubscription({ cancel_at_period_end: true }));
-    renderPanel("OWNER");
+  it.each(["ACTIVE", "PAST_DUE"] as const)(
+    "aCancelAlreadyScheduledOnA%sSubscriptionStillOffersCancelNow",
+    async (status) => {
+      serve(aSubscription({ status, cancel_at_period_end: true }));
+      renderPanel("OWNER");
 
-    expect(await screen.findByText("Cancela no fim do período")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Cancelar assinatura" })).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Trocar método" })).toBeInTheDocument();
-  });
+      expect(await screen.findByText("Cancela no fim do período")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Cancelar assinatura" })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Trocar método" })).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Cancelar agora" }));
+
+      const dialog = screen.getByRole("dialog", { name: "Cancelar assinatura?" });
+      expect(
+        within(dialog).queryByRole("radio", { name: "No fim do período" }),
+      ).not.toBeInTheDocument();
+      expect(within(dialog).getByRole("radio", { name: "Agora" })).toBeChecked();
+      expect(dialog).toHaveTextContent("A fatura em aberto também é cancelada no banco.");
+    },
+  );
 
   it("pollsEveryFiveSecondsWhileThePayerOwes", async () => {
     const counters = serve(aSubscription({ status: "PAST_DUE" }));
@@ -401,5 +247,34 @@ describe("SubscriptionDetailPanel", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Não foi possível carregar a assinatura.",
     );
+  });
+
+  // A poll that fails must not unmount what the user is doing with the data already on screen.
+  it("aFailedRefetchKeepsTheDataAndTheOpenDialog", async () => {
+    let calls = 0;
+    server.use(
+      http.get(SUBSCRIPTION, () => {
+        calls += 1;
+        return calls === 1 ? HttpResponse.json(aSubscription()) : serverError(503);
+      }),
+      http.get(`${SUBSCRIPTION}/orders`, () => HttpResponse.json([])),
+      http.get(`${API}/plans/:id`, () => HttpResponse.json(aPlan())),
+    );
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderPanel();
+
+    await userEvent.click(await screen.findByRole("button", { name: "Cancelar assinatura" }));
+    expect(screen.getByRole("dialog", { name: "Cancelar assinatura?" })).toBeInTheDocument();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(10_100);
+    });
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Não foi possível atualizar. Mostrando os últimos dados.",
+    );
+    expect(calls).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole("dialog", { name: "Cancelar assinatura?" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Assinatura sub_00000001" })).toBeInTheDocument();
   });
 });

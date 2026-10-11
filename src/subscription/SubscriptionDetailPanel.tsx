@@ -44,7 +44,8 @@ function SubscriptionDetail({ id }: { id: string }) {
     refetchIntervalInBackground: false,
   });
 
-  if (subscription.isError) {
+  // Only when there is nothing to show: a failed poll must not unmount an open dialog.
+  if (subscription.isError && !subscription.data) {
     return (
       <p role="alert" className="text-danger">
         Não foi possível carregar a assinatura.
@@ -56,22 +57,28 @@ function SubscriptionDetail({ id }: { id: string }) {
     return <p className="text-muted">Carregando…</p>;
   }
 
-  const data = subscription.data;
+  const current = subscription.data;
 
   return (
-    <section aria-label={`Assinatura ${data.id}`} className="space-y-4">
+    <section aria-label={`Assinatura ${current.id}`} className="space-y-4">
+      {subscription.isError && (
+        <p role="status" className="text-sm text-warn-fg">
+          Não foi possível atualizar. Mostrando os últimos dados.
+        </p>
+      )}
+
       <Card className="min-w-0 space-y-5">
-        <SubscriptionHeader subscription={data} />
-        <SubscriptionActions subscription={data} />
+        <SubscriptionHeader subscription={current} />
+        <SubscriptionActions subscription={current} />
       </Card>
 
       <Card className="min-w-0">
-        <InvoicesTable subscription={data} invoices={invoices.data} failed={invoices.isError} />
+        <InvoicesTable subscription={current} invoices={invoices.data} failed={invoices.isError} />
       </Card>
 
-      {data.dunning.length > 0 && (
+      {current.dunning.length > 0 && (
         <Card className="min-w-0">
-          <DunningTable dunning={data.dunning} />
+          <DunningTable dunning={current.dunning} />
         </Card>
       )}
     </section>
