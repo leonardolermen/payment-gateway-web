@@ -50,6 +50,15 @@ describe("AppLayout header", () => {
       "href",
       "/app/customers",
     );
+    expect(within(nav).getByRole("link", { name: "Assinaturas" })).toHaveAttribute(
+      "href",
+      "/app/subscriptions",
+    );
+    expect(
+      within(nav)
+        .getAllByRole("link")
+        .map((link) => link.textContent),
+    ).toEqual(["Cobranças", "Clientes", "Assinaturas", "Planos", "Configurações"]);
     expect(within(nav).getByRole("link", { name: "Planos" })).toHaveAttribute("href", "/app/plans");
     expect(within(nav).getByRole("link", { name: "Configurações" })).toHaveAttribute(
       "href",

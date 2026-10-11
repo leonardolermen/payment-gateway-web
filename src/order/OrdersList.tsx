@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { Link, useMatch, useNavigate } from "react-router";
 import { useCan } from "../auth/useCan";
 import { formatDateTime } from "../support/dates";
@@ -45,6 +45,15 @@ export function OrdersList({ onNewOrder }: Props) {
 
   const orders = query.data?.pages.flat() ?? [];
 
+  function openFromRow(event: MouseEvent, id: string) {
+    // A click on the date link already navigated; a second push would need two "back"s.
+    if ((event.target as HTMLElement).closest("a")) {
+      return;
+    }
+
+    navigate(`/app/orders/${id}`);
+  }
+
   return (
     <section className="space-y-3">
       <PageHeader
@@ -88,7 +97,7 @@ export function OrdersList({ onNewOrder }: Props) {
             <tr
               key={order.id}
               data-selected={order.id === selectedId}
-              onClick={() => navigate(`/app/orders/${order.id}`)}
+              onClick={(event) => openFromRow(event, order.id)}
               className="cursor-pointer hover:bg-surface-muted data-[selected=true]:bg-surface-muted data-[selected=true]:shadow-[inset_3px_0_0_var(--color-accent)]"
             >
               <td className="whitespace-nowrap">

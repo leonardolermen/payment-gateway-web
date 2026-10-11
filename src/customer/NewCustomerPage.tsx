@@ -1,18 +1,27 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { can } from "../auth/permissions";
 import { useMe } from "../auth/useMe";
-import { GatewayRequestError, messageFor } from "../support/gatewayError";
+import { GatewayRequestError } from "../support/gatewayError";
+import { RestartAttempt } from "../support/RestartAttempt";
 import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
 import { PageHeader } from "../support/ui/PageHeader";
+import { useIdempotencyKey } from "../support/useIdempotencyKey";
+import { AddressFieldset } from "./AddressFieldset";
 import { createCustomer, customerKeys } from "./customerApi";
+import {
+  customerFailureMessage,
+  fieldBinder,
+  invalidFieldOf,
+  type CustomerFields,
+} from "./customerForm";
 import { onlyDigits } from "./document";
 import { TextField } from "./TextField";
 import type { NewCustomer } from "./types";
 
-const EMPTY = {
+const EMPTY: CustomerFields = {
   name: "",
   document: "",
   email: "",
@@ -23,21 +32,7 @@ const EMPTY = {
   zip: "",
 };
 
-type Fields = typeof EMPTY;
-
-// The API names the field as the client sent it ("customer.address.zip"); the form keys are flat.
-const FIELD_BY_API_NAME: Record<string, keyof Fields> = {
-  "customer.name": "name",
-  "customer.document": "document",
-  "customer.email": "email",
-  "customer.address.street": "street",
-  "customer.address.district": "district",
-  "customer.address.city": "city",
-  "customer.address.state": "state",
-  "customer.address.zip": "zip",
-};
-
-function toBody(fields: Fields): NewCustomer {
+function toBody(fields: CustomerFields): NewCustomer {
   const { street, district, city, state, zip } = fields;
   const hasAddress = [street, district, city, state, zip].some((value) => value.trim() !== "");
 
@@ -68,12 +63,14 @@ export function NewCustomerPage() {
 function NewCustomerForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const idempotencyKey = useRef(crypto.randomUUID());
-  const [fields, setFields] = useState<Fields>(EMPTY);
+  const idempotencyKey = useIdempotencyKey();
+  const [fields, setFields] = useState<CustomerFields>(EMPTY);
 
   const create = useMutation({
-    mutationFn: (body: NewCustomer) => createCustomer(body, idempotencyKey.current),
+    mutationFn: (body: NewCustomer) => createCustomer(body, idempotencyKey.current()),
+    onError: (error) => idempotencyKey.renewIfNothingWasCreated(error),
     onSuccess: () => {
+      idempotencyKey.renew();
       void queryClient.invalidateQueries({ queryKey: customerKeys.all });
       navigate("/app/customers");
     },
@@ -81,20 +78,13 @@ function NewCustomerForm() {
 
   const failure = create.error instanceof GatewayRequestError ? create.error.error : null;
   const duplicateId = failure?.code === "CUSTOMER_EXISTS" ? failure.extras.customer_id : undefined;
-  const invalidField = failure?.field ? FIELD_BY_API_NAME[failure.field] : undefined;
+  const invalidField = invalidFieldOf(create.error);
+  const bind = fieldBinder(fields, setFields, create.error);
 
-  // A field error belongs next to its input; anything else goes in the alert.
-  function errorFor(name: keyof Fields): string | undefined {
-    return invalidField === name ? failure?.detail : undefined;
-  }
-
-  function bind(name: keyof Fields) {
-    return {
-      value: fields[name],
-      error: errorFor(name),
-      onChange: (event: { target: { value: string } }) =>
-        setFields({ ...fields, [name]: event.target.value }),
-    };
+  // The operator checked and found nothing created: the same form goes out under a new key.
+  function restart() {
+    idempotencyKey.renew();
+    create.reset();
   }
 
   function submit(event: FormEvent) {
@@ -112,20 +102,16 @@ function NewCustomerForm() {
           <TextField label="Documento" {...bind("document")} />
           <TextField label="E-mail" type="email" {...bind("email")} />
 
-          <fieldset className="space-y-3 border-t border-line pt-4">
-            <legend className="pr-2 text-sm font-medium text-muted">Endereço (opcional)</legend>
-            <TextField label="Rua" {...bind("street")} />
-            <TextField label="Bairro" {...bind("district")} />
-            <TextField label="Cidade" {...bind("city")} />
-            <TextField label="UF" maxLength={2} {...bind("state")} />
-            <TextField label="CEP" {...bind("zip")} />
-          </fieldset>
+          <AddressFieldset legend="Endereço (opcional)" bind={bind} />
 
           {create.isError && !invalidField && (
-            <p role="alert" className="text-sm text-danger">
-              {messageFor(create.error)}{" "}
-              {typeof duplicateId === "string" && <code>{duplicateId}</code>}
-            </p>
+            <div className="space-y-2">
+              <p role="alert" className="text-sm text-danger">
+                {customerFailureMessage(create.error)}{" "}
+                {typeof duplicateId === "string" && <code>{duplicateId}</code>}
+              </p>
+              <RestartAttempt error={create.error} onRestart={restart} />
+            </div>
           )}
 
           <Button type="submit" disabled={create.isPending}>

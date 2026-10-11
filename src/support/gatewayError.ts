@@ -63,6 +63,16 @@ const MESSAGES: Record<string, string> = {
   PROVIDER_CREDENTIALS_INVALID: "Credencial inválida.",
   CUSTOMER_EXISTS: "Já existe um cliente com este documento.",
   CUSTOMER_INVALID: "Dados do cliente inválidos.",
+  CUSTOMER_HAS_ACTIVE_SUBSCRIPTION: "Este cliente tem uma assinatura ativa.",
+  PLAN_INACTIVE: "Este plano está inativo.",
+  CARD_REQUIRED: "Escolha um cartão ou envie o link para o pagador.",
+  CARD_NOT_OWNED_BY_CUSTOMER: "Este cartão não é deste cliente.",
+  CUSTOMER_ADDRESS_REQUIRED: "Boleto precisa do endereço do cliente.",
+  SUBSCRIPTION_NOT_ACTIVE: "Esta assinatura não está ativa.",
+  IDEMPOTENCY_KEY_REUSED:
+    "A tentativa anterior pode ter sido registrada. Confira antes de tentar de novo.",
+  IN_PROGRESS:
+    "A tentativa anterior não terminou. Confira se ela foi registrada; se não, recomece.",
   INVALID_REQUEST: "Requisição inválida.",
   RATE_LIMITED: "Muitas tentativas. Aguarde um instante.",
   EMAIL_TAKEN: "Este e-mail já tem conta.",
@@ -90,4 +100,38 @@ export function messageFor(error: unknown): string {
   }
 
   return "Algo deu errado.";
+}
+
+// A 409 names what is in the way (the active subscription that keeps a customer) in the gateway's
+// own words, which say more than any fixed message the panel could hold.
+export function conflictMessageFor(error: unknown): string {
+  if (error instanceof GatewayRequestError && error.error.status === 409 && error.error.detail) {
+    return error.error.detail;
+  }
+
+  return messageFor(error);
+}
+
+// The gateway will not run a request under this key again: it is held after a 5xx (IN_PROGRESS,
+// until a purge hours later) or bound to another body (REUSED). Only a new key goes through.
+export function keyIsHeld(error: unknown): boolean {
+  if (!(error instanceof GatewayRequestError)) {
+    return false;
+  }
+
+  return error.error.code === "IN_PROGRESS" || error.error.code === "IDEMPOTENCY_KEY_REUSED";
+}
+
+// A 400 or 422 is the gateway refusing the request before it created anything, so the corrected
+// form may go out under a new Idempotency-Key. Anything else (no answer, 5xx, a 409 for a request
+// still in flight, a reused key) may have created it: the key stays, so a retry replays instead of
+// creating a second one.
+export function provesNothingWasCreated(error: unknown): boolean {
+  if (!(error instanceof GatewayRequestError)) {
+    return false;
+  }
+
+  const { status, code } = error.error;
+
+  return (status === 400 || status === 422) && code !== "IDEMPOTENCY_KEY_REUSED";
 }

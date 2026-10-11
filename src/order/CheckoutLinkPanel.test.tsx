@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
@@ -7,9 +7,17 @@ import type { Role } from "../auth/types";
 import { anOrder } from "../test/fixtures/orders";
 import { aMe } from "../test/me";
 import { server } from "../test/msw/server";
+import { serverError, withTheGatewayKeyRule } from "../test/idempotency";
 import { renderWithProviders } from "../test/render";
 import { CheckoutLinkPanel } from "./CheckoutLinkPanel";
 import type { Order } from "./types";
+
+// Rotating kills the link the payer holds: the panel asks first, every time.
+async function rotate() {
+  await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+  const dialog = screen.getByRole("dialog", { name: "Gerar um link novo?" });
+  await userEvent.click(within(dialog).getByRole("button", { name: "Gerar" }));
+}
 
 function renderPanel(order: Order, initialUrl: string | null, role: Role = "FINANCE") {
   setAccessToken("gs_test");
@@ -48,10 +56,33 @@ describe("CheckoutLinkPanel", () => {
     renderPanel(anOrder(), null);
 
     expect(screen.getByText(/O link só é exibido uma vez/)).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+    await rotate();
 
     expect(await screen.findByText("https://pay.example/c/new")).toBeInTheDocument();
     expect(key).toBeTruthy();
+  });
+
+  // The rotated link is shown once: the mutation that brought it must not outlive the panel.
+  it("theRotatedUrlLeavesTheMutationCacheWithThePanel", async () => {
+    server.use(
+      http.post("http://localhost:8080/v1/orders/ord_00000001/checkout-token/rotate", () =>
+        HttpResponse.json(anOrder({ checkout_url: "https://pay.example/c/new" })),
+      ),
+    );
+    const { queryClient, unmount } = renderPanel(anOrder(), null);
+
+    await rotate();
+    await screen.findByText("https://pay.example/c/new");
+    unmount();
+
+    await waitFor(() =>
+      expect(
+        queryClient
+          .getMutationCache()
+          .getAll()
+          .some((mutation) => JSON.stringify(mutation.state.data ?? null).includes("c/new")),
+      ).toBe(false),
+    );
   });
 
   it("isHiddenForAPaidOrder", () => {
@@ -93,9 +124,9 @@ describe("CheckoutLinkPanel idempotency keys", () => {
     );
     renderPanel(anOrder(), null);
 
-    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+    await rotate();
     await screen.findByRole("alert");
-    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+    await rotate();
 
     await screen.findByText("https://pay.example/c/new");
     expect(keys[1]).toBe(keys[0]);
@@ -111,12 +142,66 @@ describe("CheckoutLinkPanel idempotency keys", () => {
     );
     renderPanel(anOrder(), null);
 
-    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+    await rotate();
     await screen.findByText("https://pay.example/c/1");
-    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+    await rotate();
 
     await screen.findByText("https://pay.example/c/2");
     expect(keys[1]).not.toBe(keys[0]);
+  });
+});
+
+describe("CheckoutLinkPanel asks first", () => {
+  it("backingOutSendsNothing", async () => {
+    let requests = 0;
+    server.use(
+      http.post("http://localhost:8080/v1/orders/ord_00000001/checkout-token/rotate", () => {
+        requests += 1;
+        return HttpResponse.json(anOrder({ checkout_url: "https://pay.example/c/new" }));
+      }),
+    );
+    renderPanel(anOrder(), null);
+
+    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+    expect(screen.getByRole("dialog", { name: "Gerar um link novo?" })).toHaveTextContent(
+      "O link que o pagador já tem deixa de valer.",
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Voltar" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(requests).toBe(0);
+  });
+});
+
+describe("CheckoutLinkPanel held key", () => {
+  it("aHeldKeyOffersToStartOver", async () => {
+    const keys: (string | null)[] = [];
+    const answer = withTheGatewayKeyRule((run) =>
+      run === 1
+        ? serverError()
+        : HttpResponse.json(anOrder({ checkout_url: "https://pay.example/c/new" })),
+    );
+    server.use(
+      http.post(
+        "http://localhost:8080/v1/orders/ord_00000001/checkout-token/rotate",
+        ({ request }) => {
+          const key = request.headers.get("Idempotency-Key");
+          keys.push(key);
+          return answer(key);
+        },
+      ),
+    );
+    renderPanel(anOrder(), null);
+
+    await rotate();
+    await screen.findByRole("alert");
+    await rotate();
+    await userEvent.click(await screen.findByRole("button", { name: "Recomeçar" }));
+    await rotate();
+
+    await screen.findByText("https://pay.example/c/new");
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
   });
 });
 

@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { setAccessToken } from "../auth/session";
 import { anOrder } from "../test/fixtures/orders";
 import { server } from "../test/msw/server";
+import { serverError, withTheGatewayKeyRule } from "../test/idempotency";
 import { renderWithProviders } from "../test/render";
 import { NewOrderForm } from "./NewOrderForm";
 
@@ -30,13 +31,14 @@ async function fillValidForm() {
 
 describe("NewOrderForm", () => {
   it("sendsCentsAndAStableIdempotencyKeyOnDoubleClick", async () => {
+    const answer = withTheGatewayKeyRule(() => serverError());
     const keys: (string | null)[] = [];
     const bodies: Record<string, unknown>[] = [];
     server.use(
       http.post(ORDERS, async ({ request }) => {
         keys.push(request.headers.get("Idempotency-Key"));
         bodies.push((await request.json()) as Record<string, unknown>);
-        return HttpResponse.json({ type: "urn:gateway:INTERNAL" }, { status: 500 });
+        return answer(keys.at(-1) ?? null);
       }),
     );
     renderPage();
@@ -124,5 +126,54 @@ describe("NewOrderForm matches the approved mockup", () => {
     );
     expect(screen.getByPlaceholderText("Buscar por CPF…")).toBeInTheDocument();
     expect(amount.closest(".rounded-card")).not.toBeNull();
+  });
+
+  it("aRefusalThenAFixSendsANewKey", async () => {
+    const keys: (string | null)[] = [];
+    server.use(
+      http.post(ORDERS, ({ request }) => {
+        keys.push(request.headers.get("Idempotency-Key"));
+        return HttpResponse.json(
+          { type: "urn:gateway:INVALID_REQUEST", status: 400, detail: "x" },
+          { status: 400 },
+        );
+      }),
+    );
+    renderPage();
+    await fillValidForm();
+
+    await userEvent.click(screen.getByRole("button", { name: "Criar cobrança" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Requisição inválida.");
+    await userEvent.type(screen.getByLabelText("Descrição"), "corrigida");
+    await userEvent.click(screen.getByRole("button", { name: "Criar cobrança" }));
+
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[1]).not.toBe(keys[0]);
+  });
+
+  it("aHeldKeyOffersToStartOver", async () => {
+    const keys: (string | null)[] = [];
+    const answer = withTheGatewayKeyRule(() => serverError());
+    server.use(
+      http.post(ORDERS, ({ request }) => {
+        const key = request.headers.get("Idempotency-Key");
+        keys.push(key);
+        return answer(key);
+      }),
+    );
+    renderPage();
+    await fillValidForm();
+
+    const submit = screen.getByRole("button", { name: "Criar cobrança" });
+    await userEvent.click(submit);
+    await screen.findByRole("alert");
+    await userEvent.click(submit);
+    await userEvent.click(await screen.findByRole("button", { name: "Recomeçar" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await userEvent.click(submit);
+
+    await waitFor(() => expect(keys).toHaveLength(3));
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
   });
 });

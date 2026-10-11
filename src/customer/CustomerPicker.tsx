@@ -8,14 +8,34 @@ import { InlineCustomer } from "./InlineCustomer";
 import { TextField } from "./TextField";
 import type { Customer, CustomerChoice } from "./types";
 
-type Props = { value: CustomerChoice | null; onChange: (choice: CustomerChoice | null) => void };
+type Props = {
+  value: CustomerChoice | null;
+  onChange: (choice: CustomerChoice | null) => void;
+  // A customer chosen elsewhere (the "Nova cobrança" shortcut): shown as if a search had found it.
+  preselected?: Customer;
+};
 type Mode = "existing" | "new";
 
-function ExistingCustomer({ value, onChange }: Props) {
+// Exported alone for the subscription form: a subscription needs a customer_id, so it has no
+// inline "new customer" mode.
+export function ExistingCustomer({ value, onChange, preselected }: Props) {
   const [document, setDocument] = useState("");
   const [found, setFound] = useState<Customer | null | undefined>(undefined);
   const search = useMutation({ mutationFn: findByDocument, onSuccess: setFound });
-  const selected = value !== null && "customer_id" in value && value.customer_id === found?.id;
+  const shown = found === undefined ? preselected : found;
+  const selected = value !== null && "customer_id" in value && value.customer_id === shown?.id;
+  const searchable = isCpfOrCnpjShape(document) && !search.isPending;
+
+  function runSearch() {
+    if (!searchable) {
+      return;
+    }
+
+    // The customer chosen before leaves the screen with the new search; the form must not keep
+    // sending it.
+    onChange(null);
+    search.mutate(document);
+  }
 
   return (
     <div className="space-y-2">
@@ -24,13 +44,15 @@ function ExistingCustomer({ value, onChange }: Props) {
         placeholder="Buscar por CPF…"
         value={document}
         onChange={(event) => setDocument(event.target.value)}
+        onKeyDown={(event) => {
+          // Enter searches; it must not submit the order or subscription form around the picker.
+          if (event.key === "Enter") {
+            event.preventDefault();
+            runSearch();
+          }
+        }}
       />
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => search.mutate(document)}
-        disabled={!isCpfOrCnpjShape(document) || search.isPending}
-      >
+      <Button variant="ghost" size="sm" onClick={runSearch} disabled={!searchable}>
         Buscar
       </Button>
 
@@ -39,15 +61,15 @@ function ExistingCustomer({ value, onChange }: Props) {
           {messageFor(search.error)}
         </p>
       )}
-      {found === null && <p className="text-sm text-muted">Nenhum cliente com este documento.</p>}
-      {found && (
+      {shown === null && <p className="text-sm text-muted">Nenhum cliente com este documento.</p>}
+      {shown && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl bg-surface-muted p-3 text-sm">
-          <span className="font-medium">{found.name}</span>
-          <span className="font-mono text-xs text-muted">{found.document}</span>
+          <span className="font-medium">{shown.name}</span>
+          <span className="font-mono text-xs text-muted">{shown.document}</span>
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => onChange({ customer_id: found.id })}
+            onClick={() => onChange({ customer_id: shown.id })}
             disabled={selected}
           >
             Selecionar
@@ -59,7 +81,7 @@ function ExistingCustomer({ value, onChange }: Props) {
   );
 }
 
-export function CustomerPicker({ value, onChange }: Props) {
+export function CustomerPicker({ value, onChange, preselected }: Props) {
   const [mode, setMode] = useState<Mode>("existing");
 
   function switchTo(next: Mode) {
@@ -95,7 +117,7 @@ export function CustomerPicker({ value, onChange }: Props) {
       </div>
 
       {mode === "existing" ? (
-        <ExistingCustomer value={value} onChange={onChange} />
+        <ExistingCustomer value={value} onChange={onChange} preselected={preselected} />
       ) : (
         <InlineCustomer onChange={onChange} />
       )}

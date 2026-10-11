@@ -1,0 +1,94 @@
+import type { Order } from "../order/types";
+import { merchantRequest } from "../support/merchantRequest";
+import type {
+  NewSubscription,
+  Subscription,
+  SubscriptionMethodChange,
+  SubscriptionStatus,
+} from "./types";
+
+export const SUBSCRIPTION_PAGE_SIZE = 20;
+
+export type SubscriptionListParams = {
+  status?: SubscriptionStatus;
+  customer_id?: string;
+  cursor?: string;
+  limit?: number;
+};
+
+export const subscriptionKeys = {
+  all: ["subscriptions"] as const,
+  // A plain array (the customer's history). The paged list lives under `page`: an infinite query
+  // stores `{pages, pageParams}`, and sharing a key with an array would hand one the other's shape.
+  list: (params: SubscriptionListParams) => ["subscriptions", "list", params] as const,
+  page: (params: { status?: SubscriptionStatus }) => ["subscriptions", "page", params] as const,
+  detail: (id: string) => ["subscriptions", id] as const,
+  orders: (id: string) => ["subscriptions", id, "orders"] as const,
+};
+
+export async function listSubscriptions(params: SubscriptionListParams): Promise<Subscription[]> {
+  const query = new URLSearchParams();
+
+  if (params.status) {
+    query.set("status", params.status);
+  }
+  if (params.customer_id) {
+    query.set("customer_id", params.customer_id);
+  }
+  if (params.cursor) {
+    query.set("cursor", params.cursor);
+  }
+  query.set("limit", String(params.limit ?? SUBSCRIPTION_PAGE_SIZE));
+
+  const { data } = await merchantRequest<Subscription[]>(`/v1/subscriptions?${query.toString()}`);
+  return data;
+}
+
+export async function getSubscription(id: string): Promise<Subscription> {
+  const { data } = await merchantRequest<Subscription>(`/v1/subscriptions/${id}`);
+  return data;
+}
+
+// Newest first, as the gateway sends them.
+export async function listSubscriptionOrders(id: string): Promise<Order[]> {
+  const { data } = await merchantRequest<Order[]>(`/v1/subscriptions/${id}/orders`);
+  return data;
+}
+
+export async function createSubscription(
+  body: NewSubscription,
+  idempotencyKey: string,
+): Promise<Subscription> {
+  const { data } = await merchantRequest<Subscription>("/v1/subscriptions", {
+    method: "POST",
+    body,
+    idempotencyKey,
+  });
+  return data;
+}
+
+// at_period_end false ends it now; true lets the paid period run out first.
+export async function cancelSubscription(
+  id: string,
+  body: { at_period_end: boolean },
+  idempotencyKey: string,
+): Promise<Subscription> {
+  const { data } = await merchantRequest<Subscription>(`/v1/subscriptions/${id}/cancel`, {
+    method: "POST",
+    body,
+    idempotencyKey,
+  });
+  return data;
+}
+
+// From the next invoice on: the open one keeps the method it was issued with.
+export async function patchSubscription(
+  id: string,
+  body: SubscriptionMethodChange,
+): Promise<Subscription> {
+  const { data } = await merchantRequest<Subscription>(`/v1/subscriptions/${id}`, {
+    method: "PATCH",
+    body,
+  });
+  return data;
+}

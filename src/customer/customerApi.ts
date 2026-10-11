@@ -1,32 +1,49 @@
 import { merchantRequest } from "../support/merchantRequest";
 import { onlyDigits } from "./document";
-import type { Customer, NewCustomer } from "./types";
+import type { Customer, CustomerPatch, NewCustomer } from "./types";
 
 export const CUSTOMER_PAGE_SIZE = 20;
 
+export type CustomerFilter = { q?: string; document?: string };
+
 export const customerKeys = {
   all: ["customers"] as const,
-  list: ["customers", "list"] as const,
+  list: (search: CustomerFilter) => ["customers", "list", search] as const,
+  detail: (id: string) => ["customers", id] as const,
+  cards: (id: string) => ["customers", id, "cards"] as const,
 };
 
-type ListParams = { cursor?: string; limit?: number };
+type ListParams = CustomerFilter & { cursor?: string; limit?: number };
 
+// `document` is exact and answers 0 or 1 customer, so it goes alone: no cursor, no limit.
 export async function listCustomers(params: ListParams): Promise<Customer[]> {
   const query = new URLSearchParams();
-  if (params.cursor) {
-    query.set("cursor", params.cursor);
+
+  if (params.document) {
+    query.set("document", onlyDigits(params.document));
+  } else {
+    if (params.q) {
+      query.set("q", params.q);
+    }
+    if (params.cursor) {
+      query.set("cursor", params.cursor);
+    }
+    query.set("limit", String(params.limit ?? CUSTOMER_PAGE_SIZE));
   }
-  query.set("limit", String(params.limit ?? CUSTOMER_PAGE_SIZE));
 
   const { data } = await merchantRequest<Customer[]>(`/v1/customers?${query.toString()}`);
   return data;
 }
 
+export async function getCustomer(id: string): Promise<Customer> {
+  const { data } = await merchantRequest<Customer>(`/v1/customers/${id}`);
+  return data;
+}
+
 // The API answers with a list of zero or one item.
 export async function findByDocument(document: string): Promise<Customer | null> {
-  const query = new URLSearchParams({ document: onlyDigits(document) });
-  const { data } = await merchantRequest<Customer[]>(`/v1/customers?${query.toString()}`);
-  return data[0] ?? null;
+  const customers = await listCustomers({ document });
+  return customers[0] ?? null;
 }
 
 export async function createCustomer(
@@ -39,4 +56,17 @@ export async function createCustomer(
     idempotencyKey,
   });
   return data;
+}
+
+export async function patchCustomer(id: string, patch: CustomerPatch): Promise<Customer> {
+  const { data } = await merchantRequest<Customer>(`/v1/customers/${id}`, {
+    method: "PATCH",
+    body: patch,
+  });
+  return data;
+}
+
+// 409 CUSTOMER_HAS_ACTIVE_SUBSCRIPTION while a subscription still bills this customer.
+export async function deleteCustomer(id: string): Promise<void> {
+  await merchantRequest(`/v1/customers/${id}`, { method: "DELETE" });
 }

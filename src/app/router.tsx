@@ -7,12 +7,17 @@ import { ResetPage } from "../auth/ResetPage";
 import { SignupPage } from "../auth/SignupPage";
 import { VerifyPage } from "../auth/VerifyPage";
 import { PayPage } from "../checkout/PayPage";
+import { CustomerDetailPage } from "../customer/CustomerDetailPage";
 import { CustomersPage } from "../customer/CustomersPage";
 import { NewCustomerPage } from "../customer/NewCustomerPage";
 import { OrderDetailPanel } from "../order/OrderDetailPanel";
 import { NoOrderSelected, OrdersWorkspace } from "../order/OrdersWorkspace";
 import { PlansPage } from "../plan/PlansPage";
 import { SettingsPage } from "../settings/SettingsPage";
+import { NewSubscriptionForm } from "../subscription/NewSubscriptionForm";
+import { NoSubscriptionSelected } from "../subscription/NoSubscriptionSelected";
+import { SubscriptionDetailPanel } from "../subscription/SubscriptionDetailPanel";
+import { SubscriptionsWorkspace } from "../subscription/SubscriptionsWorkspace";
 import { AppLayout } from "./AppLayout";
 
 export const router = createBrowserRouter([
@@ -44,6 +49,17 @@ export const router = createBrowserRouter([
           },
           { path: "customers", element: <CustomersPage /> },
           { path: "customers/new", element: <NewCustomerPage /> },
+          { path: "customers/:id", element: <CustomerDetailPage /> },
+          {
+            path: "subscriptions",
+            element: <SubscriptionsWorkspace />,
+            children: [
+              { index: true, element: <NoSubscriptionSelected /> },
+              // Before ":id", so "new" is never read as a subscription id.
+              { path: "new", element: <NewSubscriptionForm /> },
+              { path: ":id", element: <SubscriptionDetailPanel /> },
+            ],
+          },
           { path: "plans", element: <PlansPage /> },
           { path: "settings", element: <SettingsPage /> },
         ],

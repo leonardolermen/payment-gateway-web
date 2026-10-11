@@ -13,6 +13,11 @@ export async function listPlans(active?: boolean): Promise<Plan[]> {
   return data;
 }
 
+export async function getPlan(id: string): Promise<Plan> {
+  const { data } = await merchantRequest<Plan>(`/v1/plans/${id}`);
+  return data;
+}
+
 export async function createPlan(body: NewPlan, idempotencyKey: string): Promise<Plan> {
   const { data } = await merchantRequest<Plan>("/v1/plans", {
     method: "POST",

@@ -8,9 +8,13 @@ export type Action =
   | "rotate_checkout_link"
   | "create_customer"
   | "delete_customer"
+  | "edit_customer"
+  | "delete_card"
   | "create_plan"
   | "edit_plan"
   | "create_subscription"
+  | "cancel_subscription"
+  | "change_subscription_method"
   | "webhooks"
   | "api_keys"
   | "providers"
@@ -28,9 +32,14 @@ const MINIMUM: Record<Action, Role> = {
   rotate_checkout_link: "FINANCE",
   create_customer: "FINANCE",
   delete_customer: "OWNER",
+  edit_customer: "OWNER",
+  // A saved card may be what keeps a subscription paying; removing it is the owner's call.
+  delete_card: "OWNER",
   create_plan: "FINANCE",
   edit_plan: "FINANCE",
   create_subscription: "FINANCE",
+  cancel_subscription: "FINANCE",
+  change_subscription_method: "FINANCE",
   webhooks: "OWNER",
   api_keys: "OWNER",
   providers: "OWNER",

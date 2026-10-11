@@ -7,6 +7,7 @@ import { setAccessToken } from "../auth/session";
 import { aCustomer } from "../test/fixtures/customers";
 import { server } from "../test/msw/server";
 import { CustomerPicker } from "./CustomerPicker";
+import type { CustomerChoice } from "./types";
 
 function renderPicker(onChange: () => void) {
   setAccessToken("gs_test");
@@ -15,6 +16,20 @@ function renderPicker(onChange: () => void) {
       <CustomerPicker value={null} onChange={onChange} />
     </QueryClientProvider>,
   );
+}
+
+// Inside a form, as in both screens that use it: Enter in the search must not submit the form.
+function renderPickerInAForm(value: CustomerChoice | null, onChange: () => void) {
+  const onSubmit = vi.fn((event: { preventDefault: () => void }) => event.preventDefault());
+  setAccessToken("gs_test");
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <form onSubmit={onSubmit}>
+        <CustomerPicker value={value} onChange={onChange} />
+      </form>
+    </QueryClientProvider>,
+  );
+  return onSubmit;
 }
 
 describe("CustomerPicker", () => {
@@ -78,5 +93,39 @@ describe("CustomerPicker", () => {
     expect(onChange).toHaveBeenLastCalledWith({
       customer: { name: "Ana Lima", document: "12345678909" },
     });
+  });
+
+  it("enterInTheDocumentSearchesAndDoesNotSubmitTheForm", async () => {
+    let searches = 0;
+    server.use(
+      http.get("http://localhost:8080/v1/customers", () => {
+        searches += 1;
+        return HttpResponse.json([aCustomer()]);
+      }),
+    );
+    const onSubmit = renderPickerInAForm(null, vi.fn());
+
+    await userEvent.type(screen.getByLabelText("Documento do cliente"), "12345678909{Enter}");
+
+    expect(await screen.findByText("Maria Souza")).toBeInTheDocument();
+    expect(searches).toBe(1);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  // The form must never send a customer the screen no longer shows.
+  it("aNewSearchClearsTheCurrentChoice", async () => {
+    server.use(
+      http.get("http://localhost:8080/v1/customers", () =>
+        HttpResponse.json([aCustomer({ id: "cus_b", name: "Bruno Lima" })]),
+      ),
+    );
+    const onChange = vi.fn();
+    renderPickerInAForm({ customer_id: "cus_00000001" }, onChange);
+
+    await userEvent.type(screen.getByLabelText("Documento do cliente"), "52998224725");
+    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
+
+    expect(onChange).toHaveBeenCalledWith(null);
+    expect(await screen.findByText("Bruno Lima")).toBeInTheDocument();
   });
 });
