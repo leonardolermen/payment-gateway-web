@@ -1,6 +1,6 @@
 import { merchantRequest } from "../support/merchantRequest";
 import { onlyDigits } from "./document";
-import type { Customer, NewCustomer } from "./types";
+import type { Customer, CustomerPatch, NewCustomer } from "./types";
 
 export const CUSTOMER_PAGE_SIZE = 20;
 
@@ -56,4 +56,17 @@ export async function createCustomer(
     idempotencyKey,
   });
   return data;
+}
+
+export async function patchCustomer(id: string, patch: CustomerPatch): Promise<Customer> {
+  const { data } = await merchantRequest<Customer>(`/v1/customers/${id}`, {
+    method: "PATCH",
+    body: patch,
+  });
+  return data;
+}
+
+// 409 CUSTOMER_HAS_ACTIVE_SUBSCRIPTION while a subscription still bills this customer.
+export async function deleteCustomer(id: string): Promise<void> {
+  await merchantRequest(`/v1/customers/${id}`, { method: "DELETE" });
 }

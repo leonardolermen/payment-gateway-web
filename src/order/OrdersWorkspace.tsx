@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Outlet, useMatch } from "react-router";
+import { useEffect, useState } from "react";
+import { Outlet, useMatch, useSearchParams } from "react-router";
 import { useCan } from "../auth/useCan";
 import { Workspace, WorkspaceEmpty } from "../support/ui/Workspace";
 import { NewOrderForm } from "./NewOrderForm";
@@ -10,6 +10,18 @@ export function OrdersWorkspace() {
   const selected = useMatch("/app/orders/:id") !== null;
   // Bumped after a create: a fresh form is a fresh idempotency key, and the next charge starts empty.
   const [formGeneration, setFormGeneration] = useState(0);
+
+  // The customer page's "Nova cobrança" shortcut sends only the id. Read once and dropped from the
+  // URL: a reload or a copied link must not keep choosing that customer, and the form after a
+  // create starts empty.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [preselectedCustomerId] = useState(() => searchParams.get("customer_id"));
+
+  useEffect(() => {
+    if (searchParams.has("customer_id")) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   function focusNewOrder() {
     const amount = document.getElementById("amount");
@@ -26,6 +38,7 @@ export function OrdersWorkspace() {
           {mayCreateCharge && (
             <NewOrderForm
               key={formGeneration}
+              preselectedCustomerId={formGeneration === 0 ? preselectedCustomerId : null}
               onCreated={() => setFormGeneration((generation) => generation + 1)}
             />
           )}

@@ -5,6 +5,8 @@ type Props = {
   title: string;
   confirmLabel: string;
   pending: boolean;
+  // For a confirmation that needs more than a click, such as typing the name of what goes away.
+  confirmDisabled?: boolean;
   error: string | null;
   onConfirm: () => void;
   onCancel: () => void;
@@ -17,6 +19,7 @@ export function ConfirmDialog({
   title,
   confirmLabel,
   pending,
+  confirmDisabled = false,
   error,
   onConfirm,
   onCancel,
@@ -41,7 +44,7 @@ export function ConfirmDialog({
           <Button variant="ghost" onClick={onCancel}>
             Voltar
           </Button>
-          <Button variant="danger" disabled={pending} onClick={onConfirm}>
+          <Button variant="danger" disabled={pending || confirmDisabled} onClick={onConfirm}>
             {confirmLabel}
           </Button>
         </div>

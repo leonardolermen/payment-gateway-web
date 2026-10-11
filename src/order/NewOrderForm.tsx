@@ -1,6 +1,7 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
+import { customerKeys, getCustomer } from "../customer/customerApi";
 import { CustomerPicker } from "../customer/CustomerPicker";
 import type { CustomerChoice } from "../customer/types";
 import { TextField } from "../customer/TextField";
@@ -11,11 +12,11 @@ import { Card } from "../support/ui/Card";
 import { MoneyInput } from "./MoneyInput";
 import { createOrder, orderKeys } from "./orderApi";
 
-type Props = { onCreated?: () => void };
+type Props = { onCreated?: () => void; preselectedCustomerId?: string | null };
 
 // Lives under the orders list, as in the mockup: creating does not leave the list. The workspace
 // remounts it after a success, which also mints the next idempotency key.
-export function NewOrderForm({ onCreated }: Props) {
+export function NewOrderForm({ onCreated, preselectedCustomerId = null }: Props) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -27,9 +28,25 @@ export function NewOrderForm({ onCreated }: Props) {
   const [description, setDescription] = useState("");
   const [reference, setReference] = useState("");
   const [expiresLocal, setExpiresLocal] = useState("");
-  const [customer, setCustomer] = useState<CustomerChoice | null>(null);
+  // undefined until the picker is touched; until then the preselected customer is the choice.
+  const [pickedCustomer, setPickedCustomer] = useState<CustomerChoice | null | undefined>(
+    undefined,
+  );
   const [amountError, setAmountError] = useState(false);
   const [customerError, setCustomerError] = useState(false);
+
+  const preselected = useQuery({
+    queryKey: customerKeys.detail(preselectedCustomerId ?? ""),
+    queryFn: preselectedCustomerId ? () => getCustomer(preselectedCustomerId) : skipToken,
+  });
+
+  // Only a customer that loaded is chosen: an id that does not resolve must never go out unseen.
+  const customer =
+    pickedCustomer !== undefined
+      ? pickedCustomer
+      : preselected.data
+        ? { customer_id: preselected.data.id }
+        : null;
 
   const create = useMutation({
     mutationFn: (body: Parameters<typeof createOrder>[0]) =>
@@ -79,7 +96,11 @@ export function NewOrderForm({ onCreated }: Props) {
           onChange={(event) => setDescription(event.target.value)}
         />
 
-        <CustomerPicker value={customer} onChange={setCustomer} />
+        <CustomerPicker
+          value={customer}
+          onChange={setPickedCustomer}
+          preselected={preselected.data}
+        />
 
         {customerError && <p className="text-sm text-danger">Escolha ou informe um cliente.</p>}
 

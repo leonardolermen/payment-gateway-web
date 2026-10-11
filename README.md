@@ -37,6 +37,7 @@ Painel do merchant e checkout hospedado do payment gateway (React 19, Vite, Tail
 | `/app/orders/new`    | redireciona para `/app/orders`, onde o formulário fica                                                                                                                                                   |
 | `/app/customers`     | lista de clientes                                                                                                                                                                                        |
 | `/app/customers/new` | novo cliente                                                                                                                                                                                             |
+| `/app/customers/:id` | um cliente: dados, cartões salvos, histórico de cobranças e assinaturas, editar, excluir e nova cobrança                                                                                                 |
 | `/app/plans`         | planos: lista com filtro "só ativos", novo plano e edição de nome/ativo                                                                                                                                  |
 | `/app/settings`      | configurações, em abas: Conta (loja e ambiente), Minha conta (nome e senha), Parcelamento (máximo, sem juros até, juros ao mês, prévia do que o pagador vê), Provedores (só para o dono: credenciais do Itaú para Pix/boleto e da Cielo para cartão, por ambiente, com testar conexão, chave de notificação da Cielo e a URL de webhook para registrar no banco) e Equipe (convites e papéis, só para o dono) |
 | `/pay/:token`        | checkout do pagador: Pix, boleto ou cartão (sem chave, o token vem na URL)                                                                                                                               |
@@ -67,6 +68,7 @@ O token de acesso vai no header `Authorization: Bearer` e o ambiente (teste ou p
   | Criar, cancelar e reembolsar cobranças; criar cliente; criar e editar plano; criar assinatura | sim  |    sim     |   não   |
   | Gerar novo link de pagamento (invalida o link que o pagador já tem)                           | sim  |    sim     |   não   |
   | Excluir cliente                                                                               | sim  |    não     |   não   |
+  | Editar cliente; remover cartão salvo                                                          | sim  |    não     |   não   |
   | Webhooks, chaves de API, provedores, parcelamento, equipe e loja                              | sim  |    não     |   não   |
 
 - Segredos de provedor (client secret, merchant key, chave privada, chave de notificação) nunca voltam

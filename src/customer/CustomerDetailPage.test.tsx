@@ -1,4 +1,5 @@
 import { screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
 import { setAccessToken } from "../auth/session";
@@ -126,6 +127,45 @@ describe("CustomerDetailPage", () => {
     await screen.findByRole("heading", { name: "Maria Souza" });
 
     expect(screen.queryByRole("link", { name: "Nova cobrança" })).not.toBeInTheDocument();
+  });
+
+  it("saysItIsLoadingWhileTheCustomerLoads", async () => {
+    renderDetail();
+
+    expect(screen.getByRole("status")).toHaveTextContent("Carregando…");
+    expect(await screen.findByRole("heading", { name: "Maria Souza" })).toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("editReplacesTheDataInPlaceAndCancelRestoresIt", async () => {
+    renderDetail("OWNER");
+
+    await userEvent.click(await screen.findByRole("button", { name: "Editar" }));
+
+    const data = screen.getByRole("region", { name: "Dados" });
+    expect(within(data).getByLabelText("Nome")).toHaveValue("Maria Souza");
+
+    await userEvent.click(within(data).getByRole("button", { name: "Cancelar" }));
+
+    expect(within(data).queryByLabelText("Nome")).not.toBeInTheDocument();
+    expect(within(data).getByText("maria@example.com")).toBeInTheDocument();
+  });
+
+  it("ownerOpensTheDeleteDialogFromTheFooter", async () => {
+    renderDetail("OWNER");
+
+    await userEvent.click(await screen.findByRole("button", { name: "Excluir cliente" }));
+
+    expect(screen.getByRole("dialog", { name: "Excluir cliente?" })).toBeInTheDocument();
+  });
+
+  it("hidesEditAndDeleteFromFinance", async () => {
+    renderDetail("FINANCE");
+
+    await screen.findByRole("heading", { name: "Maria Souza" });
+
+    expect(screen.queryByRole("button", { name: "Editar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Excluir cliente" })).not.toBeInTheDocument();
   });
 
   it("saysWhenTheCustomerDoesNotExist", async () => {

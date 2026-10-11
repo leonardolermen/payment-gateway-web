@@ -36,4 +36,12 @@ export type NewCustomer = {
   address?: Address;
 };
 
+// Only what changed goes out: the API answers 400 to an empty body, and the address is replaced
+// as a whole, never merged field by field.
+export type CustomerPatch = {
+  name?: string;
+  email?: string;
+  address?: Address;
+};
+
 export type CustomerChoice = { customer_id: string } | { customer: NewCustomer };

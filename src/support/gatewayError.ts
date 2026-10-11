@@ -63,6 +63,7 @@ const MESSAGES: Record<string, string> = {
   PROVIDER_CREDENTIALS_INVALID: "Credencial inválida.",
   CUSTOMER_EXISTS: "Já existe um cliente com este documento.",
   CUSTOMER_INVALID: "Dados do cliente inválidos.",
+  CUSTOMER_HAS_ACTIVE_SUBSCRIPTION: "Este cliente tem uma assinatura ativa.",
   INVALID_REQUEST: "Requisição inválida.",
   RATE_LIMITED: "Muitas tentativas. Aguarde um instante.",
   EMAIL_TAKEN: "Este e-mail já tem conta.",

@@ -1,12 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link, useParams } from "react-router";
 import { useCan } from "../auth/useCan";
 import { messageFor } from "../support/gatewayError";
+import { Button } from "../support/ui/Button";
 import { buttonClasses } from "../support/ui/buttonClasses";
 import { PageHeader } from "../support/ui/PageHeader";
 import { CustomerDataCard } from "./CustomerDataCard";
 import { CustomerHistoryCard } from "./CustomerHistoryCard";
 import { customerKeys, getCustomer } from "./customerApi";
+import { DeleteCustomerDialog } from "./DeleteCustomerDialog";
 import { SavedCardsCard } from "./SavedCardsCard";
 
 function BackToCustomers() {
@@ -25,6 +28,8 @@ export function CustomerDetailPage() {
 
 function CustomerDetail({ id }: { id: string }) {
   const mayCreateCharge = useCan("create_charge");
+  const mayDeleteCustomer = useCan("delete_customer");
+  const [deleting, setDeleting] = useState(false);
   const customer = useQuery({ queryKey: customerKeys.detail(id), queryFn: () => getCustomer(id) });
 
   if (customer.isError) {
@@ -39,7 +44,11 @@ function CustomerDetail({ id }: { id: string }) {
   }
 
   if (!customer.data) {
-    return null;
+    return (
+      <p role="status" className="text-muted">
+        Carregando…
+      </p>
+    );
   }
 
   return (
@@ -61,6 +70,19 @@ function CustomerDetail({ id }: { id: string }) {
       <CustomerDataCard customer={customer.data} />
       <SavedCardsCard customerId={id} />
       <CustomerHistoryCard customerId={id} />
+
+      {/* Discreet on purpose, at the bottom: it is the one action here that cannot be undone. */}
+      {mayDeleteCustomer && (
+        <footer className="border-t border-line pt-4">
+          <Button variant="danger-ghost" size="sm" onClick={() => setDeleting(true)}>
+            Excluir cliente
+          </Button>
+        </footer>
+      )}
+
+      {deleting && (
+        <DeleteCustomerDialog customer={customer.data} onClose={() => setDeleting(false)} />
+      )}
     </section>
   );
 }

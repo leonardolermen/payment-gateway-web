@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { setAccessToken } from "../auth/session";
 import type { Role } from "../auth/types";
 import { aMe } from "../test/me";
+import { aCustomer } from "../test/fixtures/customers";
 import { anOrder } from "../test/fixtures/orders";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
@@ -12,6 +13,7 @@ import { OrderDetailPanel } from "./OrderDetailPanel";
 import { NoOrderSelected, OrdersWorkspace } from "./OrdersWorkspace";
 
 const ORDERS = "http://localhost:8080/v1/orders";
+const CUSTOMERS = "http://localhost:8080/v1/customers";
 
 function renderWorkspace(path = "/app/orders", role: Role = "OWNER") {
   setAccessToken("gs_test");
@@ -102,6 +104,31 @@ describe("OrdersWorkspace", () => {
       expect(screen.queryByText("http://localhost:5173/pay/chk_first")).not.toBeInTheDocument(),
     );
     expect(await screen.findByText(/O link só é exibido uma vez/)).toBeInTheDocument();
+  });
+
+  it("aCustomerIdInTheUrlPreselectsTheCustomerAndLeavesTheUrl", async () => {
+    const bodies: Record<string, unknown>[] = [];
+    server.use(
+      http.get(ORDERS, () => HttpResponse.json([])),
+      http.get(`${CUSTOMERS}/cus_00000001`, () => HttpResponse.json(aCustomer())),
+      http.post(ORDERS, async ({ request }) => {
+        bodies.push((await request.json()) as Record<string, unknown>);
+        return HttpResponse.json({ type: "urn:gateway:INTERNAL" }, { status: 500 });
+      }),
+    );
+    const { router } = renderWorkspace("/app/orders?customer_id=cus_00000001", "FINANCE");
+
+    expect(await screen.findByText("Maria Souza")).toBeInTheDocument();
+    expect(screen.getByText("Selecionado")).toBeInTheDocument();
+    await waitFor(() => expect(router.state.location.search).toBe(""));
+    expect(router.state.location.pathname).toBe("/app/orders");
+
+    await userEvent.type(screen.getByLabelText("Valor"), "49,90");
+    await userEvent.click(screen.getByRole("button", { name: "Criar cobrança" }));
+
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    expect(bodies[0]).toMatchObject({ amount: 4990, customer_id: "cus_00000001" });
+    expect(bodies[0]).not.toHaveProperty("customer");
   });
 
   it("readonlySeesTheListAndNoNewOrderForm", async () => {
