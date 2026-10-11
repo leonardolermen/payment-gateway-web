@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
@@ -52,6 +52,29 @@ describe("CheckoutLinkPanel", () => {
 
     expect(await screen.findByText("https://pay.example/c/new")).toBeInTheDocument();
     expect(key).toBeTruthy();
+  });
+
+  // The rotated link is shown once: the mutation that brought it must not outlive the panel.
+  it("theRotatedUrlLeavesTheMutationCacheWithThePanel", async () => {
+    server.use(
+      http.post("http://localhost:8080/v1/orders/ord_00000001/checkout-token/rotate", () =>
+        HttpResponse.json(anOrder({ checkout_url: "https://pay.example/c/new" })),
+      ),
+    );
+    const { queryClient, unmount } = renderPanel(anOrder(), null);
+
+    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+    await screen.findByText("https://pay.example/c/new");
+    unmount();
+
+    await waitFor(() =>
+      expect(
+        queryClient
+          .getMutationCache()
+          .getAll()
+          .some((mutation) => JSON.stringify(mutation.state.data ?? null).includes("c/new")),
+      ).toBe(false),
+    );
   });
 
   it("isHiddenForAPaidOrder", () => {

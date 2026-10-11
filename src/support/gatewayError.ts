@@ -68,6 +68,8 @@ const MESSAGES: Record<string, string> = {
   CARD_REQUIRED: "Escolha um cartão ou envie o link para o pagador.",
   CARD_NOT_OWNED_BY_CUSTOMER: "Este cartão não é deste cliente.",
   CUSTOMER_ADDRESS_REQUIRED: "Boleto precisa do endereço do cliente.",
+  IDEMPOTENCY_KEY_REUSED:
+    "A tentativa anterior pode ter criado a assinatura. Confira a lista antes de tentar de novo.",
   INVALID_REQUEST: "Requisição inválida.",
   RATE_LIMITED: "Muitas tentativas. Aguarde um instante.",
   EMAIL_TAKEN: "Este e-mail já tem conta.",
@@ -105,4 +107,18 @@ export function conflictMessageFor(error: unknown): string {
   }
 
   return messageFor(error);
+}
+
+// A 400 or 422 is the gateway refusing the request before it created anything, so the corrected
+// form may go out under a new Idempotency-Key. Anything else (no answer, 5xx, a 409 for a request
+// still in flight, a reused key) may have created it: the key stays, so a retry replays instead of
+// creating a second one.
+export function provesNothingWasCreated(error: unknown): boolean {
+  if (!(error instanceof GatewayRequestError)) {
+    return false;
+  }
+
+  const { status, code } = error.error;
+
+  return (status === 400 || status === 422) && code !== "IDEMPOTENCY_KEY_REUSED";
 }

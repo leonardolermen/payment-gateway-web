@@ -24,6 +24,18 @@ export function ExistingCustomer({ value, onChange, preselected }: Props) {
   const search = useMutation({ mutationFn: findByDocument, onSuccess: setFound });
   const shown = found === undefined ? preselected : found;
   const selected = value !== null && "customer_id" in value && value.customer_id === shown?.id;
+  const searchable = isCpfOrCnpjShape(document) && !search.isPending;
+
+  function runSearch() {
+    if (!searchable) {
+      return;
+    }
+
+    // The customer chosen before leaves the screen with the new search; the form must not keep
+    // sending it.
+    onChange(null);
+    search.mutate(document);
+  }
 
   return (
     <div className="space-y-2">
@@ -32,13 +44,15 @@ export function ExistingCustomer({ value, onChange, preselected }: Props) {
         placeholder="Buscar por CPF…"
         value={document}
         onChange={(event) => setDocument(event.target.value)}
+        onKeyDown={(event) => {
+          // Enter searches; it must not submit the order or subscription form around the picker.
+          if (event.key === "Enter") {
+            event.preventDefault();
+            runSearch();
+          }
+        }}
       />
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => search.mutate(document)}
-        disabled={!isCpfOrCnpjShape(document) || search.isPending}
-      >
+      <Button variant="ghost" size="sm" onClick={runSearch} disabled={!searchable}>
         Buscar
       </Button>
 

@@ -1,5 +1,5 @@
 import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { useCan } from "../auth/useCan";
 import { listCards } from "../customer/cardApi";
@@ -10,7 +10,7 @@ import type { CustomerChoice } from "../customer/types";
 import type { PaymentMethod } from "../order/types";
 import { listPlans, planKeys } from "../plan/planApi";
 import { priceLabel } from "../plan/planLabels";
-import { messageFor } from "../support/gatewayError";
+import { messageFor, provesNothingWasCreated } from "../support/gatewayError";
 import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
 import { Field } from "../support/ui/Field";
@@ -43,17 +43,17 @@ function NewSubscriptionFields() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  // One key until the gateway gives a clear answer: success, or a refusal that created nothing.
+  // Editing the form after a 5xx or a lost response does not make it a new subscription.
   const idempotencyKey = useIdempotencyKey();
-  // The body the current key was minted for: a changed form is a new intent and gets a new key.
-  const sentBody = useRef<string | null>(null);
 
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [planId, setPlanId] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("PIX");
-  // undefined until the select is touched; until then the first saved card is the choice.
+  // undefined until a card or the link is picked: no card is charged by default.
   const [cardChoice, setCardChoice] = useState<string | null | undefined>(undefined);
   const [startAt, setStartAt] = useState("");
-  const [missing, setMissing] = useState({ customer: false, plan: false });
+  const [missing, setMissing] = useState({ customer: false, plan: false, card: false });
   const [awaitingCard, setAwaitingCard] = useState<Subscription | null>(null);
 
   const plans = useQuery({ queryKey: planKeys.list(true), queryFn: () => listPlans(true) });
@@ -63,18 +63,20 @@ function NewSubscriptionFields() {
     queryKey: customerKeys.cards(customerId ?? ""),
     queryFn: wantsCards && customerId !== null ? () => listCards(customerId) : skipToken,
   });
-  const savedCards = cards.data ?? [];
-  const cardId = cardChoice === undefined ? (savedCards[0]?.id ?? null) : cardChoice;
-  // Submitting before the cards arrive would silently pick the link.
-  const cardsLoading = wantsCards && cards.isPending;
+  // Submitting before the cards arrive, or after they failed, would hide a choice from the user.
+  const cardsUnavailable = wantsCards && (cards.isPending || cards.isError);
 
   const create = useMutation({
     mutationFn: (body: NewSubscription) => createSubscription(body, idempotencyKey.current()),
     // The response may carry the one-time checkout link: the mutation is dropped with the form.
     gcTime: 0,
+    onError: (error) => {
+      if (provesNothingWasCreated(error)) {
+        idempotencyKey.renew();
+      }
+    },
     onSuccess: (subscription) => {
       idempotencyKey.renew();
-      sentBody.current = null;
 
       // Invalidated, never seeded with the response: the cache outlives this panel, and the link
       // inside the response must not.
@@ -98,9 +100,14 @@ function NewSubscriptionFields() {
   function submit(event: FormEvent) {
     event.preventDefault();
 
-    setMissing({ customer: customerId === null, plan: planId === "" });
+    const nextMissing = {
+      customer: customerId === null,
+      plan: planId === "",
+      card: wantsCards && cards.isSuccess && cardChoice === undefined,
+    };
+    setMissing(nextMissing);
 
-    if (customerId === null || planId === "") {
+    if (customerId === null || cardsUnavailable || Object.values(nextMissing).some(Boolean)) {
       return;
     }
 
@@ -108,17 +115,9 @@ function NewSubscriptionFields() {
       customer_id: customerId,
       plan_id: planId,
       method,
-      ...(method === "CARD" && cardId !== null && { card_id: cardId }),
+      ...(method === "CARD" && typeof cardChoice === "string" && { card_id: cardChoice }),
       ...(startAt !== "" && { start_at: startAt }),
     };
-
-    // Same body, same key: a retry after a 5xx or a lost response replays the subscription
-    // instead of creating a second one.
-    const serialized = JSON.stringify(body);
-    if (serialized !== sentBody.current) {
-      idempotencyKey.renew();
-      sentBody.current = serialized;
-    }
 
     create.mutate(body);
   }
@@ -146,17 +145,24 @@ function NewSubscriptionFields() {
             value={customerId !== null ? { customer_id: customerId } : null}
             onChange={chooseCustomer}
           />
-          {missing.customer && <p className="text-sm text-danger">Escolha um cliente.</p>}
+          {missing.customer && (
+            <p role="alert" className="text-sm text-danger">
+              Escolha um cliente.
+            </p>
+          )}
         </fieldset>
 
         <Field
           label="Plano"
           htmlFor="subscription-plan"
           error={missing.plan ? "Escolha um plano." : undefined}
+          errorId="subscription-plan-error"
         >
           <select
             id="subscription-plan"
             value={planId}
+            aria-invalid={missing.plan ? true : undefined}
+            aria-describedby={missing.plan ? "subscription-plan-error" : undefined}
             className={INPUT_CLASSES}
             onChange={(event) => setPlanId(event.target.value)}
           >
@@ -192,12 +198,19 @@ function NewSubscriptionFields() {
           </div>
         </fieldset>
 
-        {wantsCards && !cards.isPending && (
-          <SavedCardSelect cards={savedCards} value={cardId} onChange={setCardChoice} />
+        {wantsCards && cards.isSuccess && (
+          <SavedCardSelect
+            cards={cards.data}
+            value={cardChoice}
+            onChange={setCardChoice}
+            error={missing.card ? "Escolha um cartão ou o link" : undefined}
+          />
         )}
 
         {wantsCards && cards.isError && (
-          <p className="text-sm text-danger">Não foi possível carregar os cartões salvos.</p>
+          <p role="alert" className="text-sm text-danger">
+            Não foi possível carregar os cartões deste cliente.
+          </p>
         )}
 
         <TextField
@@ -213,7 +226,7 @@ function NewSubscriptionFields() {
           </p>
         )}
 
-        <Button type="submit" size="lg" disabled={create.isPending || cardsLoading}>
+        <Button type="submit" size="lg" disabled={create.isPending || cardsUnavailable}>
           Criar assinatura
         </Button>
       </form>

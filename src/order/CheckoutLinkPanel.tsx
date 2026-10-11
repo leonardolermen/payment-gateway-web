@@ -23,6 +23,8 @@ export function CheckoutLinkPanel({ order, initialUrl, children }: Props) {
   // A second rotate under a fresh key would kill the link just issued; a retry reuses the key.
   const rotate = useMutation({
     mutationFn: () => rotateCheckoutToken(order.id, rotateKey.current()),
+    // The rotated link is shown once: the mutation that holds it goes away with the panel.
+    gcTime: 0,
     onSuccess: async (rotated) => {
       rotateKey.renew();
       setUrl(rotated.checkout_url);

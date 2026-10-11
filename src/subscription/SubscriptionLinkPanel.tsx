@@ -6,7 +6,8 @@ import { Card } from "../support/ui/Card";
 type Props = { firstOrder: Order; onDone: () => void };
 
 // A card subscription without a saved card waits for the payer to register one through this link.
-// The gateway hands the link out once: it lives in this panel's props and nowhere else.
+// The gateway hands the link out once. It comes from the form's state, never from the query
+// cache, and both mutations that carry it (create and rotate) are dropped when the panel unmounts.
 export function SubscriptionLinkPanel({ firstOrder, onDone }: Props) {
   return (
     <Card>

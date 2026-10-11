@@ -170,6 +170,7 @@ describe("NewSubscriptionForm", () => {
         .getAllByRole("option")
         .map((option) => option.textContent),
     ).toEqual([
+      "Escolha um cartão…",
       "Visa final 4242 · 12/2030",
       "Mastercard final 5454 · 01/2031",
       "O pagador cadastra o cartão pelo link",
@@ -199,7 +200,7 @@ describe("NewSubscriptionForm", () => {
       within(card)
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["O pagador cadastra o cartão pelo link"]);
+    ).toEqual(["Escolha um cartão…", "O pagador cadastra o cartão pelo link"]);
   });
 
   it("cardByLinkShowsTheLinkOnce", async () => {
@@ -326,5 +327,151 @@ describe("NewSubscriptionForm", () => {
 
     expect(await screen.findByText(/Escolha uma assinatura na lista/)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Criar assinatura" })).not.toBeInTheDocument();
+  });
+
+  // A 5xx may have created the subscription: whatever the form says now, the retry is the same
+  // intent and must replay under the same key.
+  it("keepsTheKeyAfterA5xxEvenWhenTheFormChanges", async () => {
+    serveTheBasics();
+    let answers = 0;
+    const sent = servePost(() => {
+      answers += 1;
+      return answers === 1
+        ? HttpResponse.json({ type: "urn:gateway:INTERNAL" }, { status: 500 })
+        : created();
+    });
+    renderForm();
+
+    await fillPix();
+    await submit();
+    await screen.findByRole("alert");
+    await userEvent.type(screen.getByLabelText("Início"), "2026-11-01");
+    await submit();
+
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1]?.body).toHaveProperty("start_at", "2026-11-01");
+    expect(sent[1]?.key).toBe(sent[0]?.key);
+  });
+
+  // A 422 is a clear "nothing was created": the corrected form is a new request.
+  it("renewsTheKeyAfterADefinite422", async () => {
+    serveTheBasics();
+    let answers = 0;
+    const sent = servePost(() => {
+      answers += 1;
+      return answers === 1
+        ? HttpResponse.json(
+            { type: "urn:gateway:CUSTOMER_ADDRESS_REQUIRED", status: 422 },
+            { status: 422 },
+          )
+        : created();
+    });
+    renderForm();
+
+    await chooseCustomer();
+    await choosePlan();
+    await userEvent.click(screen.getByRole("radio", { name: "Boleto" }));
+    await submit();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Boleto precisa do endereço");
+    await userEvent.click(screen.getByRole("radio", { name: "Pix" }));
+    await submit();
+
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1]?.key).not.toBe(sent[0]?.key);
+  });
+
+  it("aReusedKeyAsksToCheckTheListAndKeepsTheKey", async () => {
+    serveTheBasics();
+    const sent = servePost(() =>
+      HttpResponse.json(
+        { type: "urn:gateway:IDEMPOTENCY_KEY_REUSED", status: 422 },
+        { status: 422 },
+      ),
+    );
+    renderForm();
+
+    await fillPix();
+    await submit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "A tentativa anterior pode ter criado a assinatura. Confira a lista antes de tentar de novo.",
+    );
+    await submit();
+    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(sent[1]?.key).toBe(sent[0]?.key);
+  });
+
+  it("aNewSearchDropsTheCustomerChosenBefore", async () => {
+    serveTheBasics();
+    server.use(
+      http.get(`${API}/customers`, ({ request }) =>
+        new URL(request.url).searchParams.get("document") === "52998224725"
+          ? HttpResponse.json([aCustomer()])
+          : HttpResponse.json([aCustomer({ id: "cus_b", name: "Bruno Lima" })]),
+      ),
+    );
+    const sent = servePost(() => created());
+    renderForm();
+
+    await fillPix();
+    const search = screen.getByLabelText("Documento do cliente");
+    await userEvent.clear(search);
+    await userEvent.type(search, "11144477735");
+    await userEvent.click(screen.getByRole("button", { name: "Buscar" }));
+    await screen.findByText("Bruno Lima");
+    await submit();
+
+    expect(await screen.findByText("Escolha um cliente.")).toHaveAttribute("role", "alert");
+    expect(sent).toHaveLength(0);
+  });
+
+  it("anUntouchedCardSelectBlocksTheSubmit", async () => {
+    serveTheBasics([aSavedCard()]);
+    const sent = servePost(() => created());
+    renderForm();
+
+    await chooseCustomer();
+    await choosePlan();
+    await userEvent.click(screen.getByRole("radio", { name: "Cartão" }));
+    const card = await screen.findByLabelText("Cartão salvo");
+    expect(card).toHaveValue("");
+    await submit();
+
+    expect(await screen.findByText("Escolha um cartão ou o link")).toBeInTheDocument();
+    expect(card).toHaveAttribute("aria-invalid", "true");
+    expect(sent).toHaveLength(0);
+  });
+
+  it("cardsThatFailToLoadBlockACardSubmit", async () => {
+    serveTheBasics();
+    server.use(
+      http.get(`${API}/customers/:id/cards`, () =>
+        HttpResponse.json({ type: "urn:gateway:INTERNAL" }, { status: 500 }),
+      ),
+    );
+    const sent = servePost(() => created());
+    renderForm();
+
+    await chooseCustomer();
+    await choosePlan();
+    await userEvent.click(screen.getByRole("radio", { name: "Cartão" }));
+    expect(
+      await screen.findByText("Não foi possível carregar os cartões deste cliente."),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Cartão salvo")).not.toBeInTheDocument();
+    await submit();
+
+    expect(sent).toHaveLength(0);
+  });
+
+  it("thePlanErrorDescribesTheSelect", async () => {
+    serveTheBasics();
+    renderForm();
+
+    await submit();
+
+    const plan = screen.getByLabelText("Plano");
+    expect(plan).toHaveAttribute("aria-invalid", "true");
+    expect(plan).toHaveAccessibleDescription("Escolha um plano.");
   });
 });
