@@ -4,19 +4,32 @@ import type { Customer, NewCustomer } from "./types";
 
 export const CUSTOMER_PAGE_SIZE = 20;
 
+export type CustomerSearch = { q?: string; document?: string };
+
 export const customerKeys = {
   all: ["customers"] as const,
-  list: ["customers", "list"] as const,
+  list: (search: CustomerSearch) => ["customers", "list", search] as const,
+  detail: (id: string) => ["customers", id] as const,
+  cards: (id: string) => ["customers", id, "cards"] as const,
 };
 
-type ListParams = { cursor?: string; limit?: number };
+type ListParams = CustomerSearch & { cursor?: string; limit?: number };
 
+// `document` is exact and answers 0 or 1 customer, so it goes alone: no cursor, no limit.
 export async function listCustomers(params: ListParams): Promise<Customer[]> {
   const query = new URLSearchParams();
-  if (params.cursor) {
-    query.set("cursor", params.cursor);
+
+  if (params.document) {
+    query.set("document", onlyDigits(params.document));
+  } else {
+    if (params.q) {
+      query.set("q", params.q);
+    }
+    if (params.cursor) {
+      query.set("cursor", params.cursor);
+    }
+    query.set("limit", String(params.limit ?? CUSTOMER_PAGE_SIZE));
   }
-  query.set("limit", String(params.limit ?? CUSTOMER_PAGE_SIZE));
 
   const { data } = await merchantRequest<Customer[]>(`/v1/customers?${query.toString()}`);
   return data;
@@ -24,15 +37,11 @@ export async function listCustomers(params: ListParams): Promise<Customer[]> {
 
 // The API answers with a list of zero or one item.
 export async function findByDocument(document: string): Promise<Customer | null> {
-  const query = new URLSearchParams({ document: onlyDigits(document) });
-  const { data } = await merchantRequest<Customer[]>(`/v1/customers?${query.toString()}`);
-  return data[0] ?? null;
+  const customers = await listCustomers({ document });
+  return customers[0] ?? null;
 }
 
-export async function createCustomer(
-  body: NewCustomer,
-  idempotencyKey: string,
-): Promise<Customer> {
+export async function createCustomer(body: NewCustomer, idempotencyKey: string): Promise<Customer> {
   const { data } = await merchantRequest<Customer>("/v1/customers", {
     method: "POST",
     body,
