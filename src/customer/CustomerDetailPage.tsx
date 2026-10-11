@@ -32,7 +32,8 @@ function CustomerDetail({ id }: { id: string }) {
   const [deleting, setDeleting] = useState(false);
   const customer = useQuery({ queryKey: customerKeys.detail(id), queryFn: () => getCustomer(id) });
 
-  if (customer.isError) {
+  // Only when there is nothing to show: a failed refetch must not unmount an open dialog.
+  if (customer.isError && !customer.data) {
     return (
       <section className="space-y-4">
         <BackToCustomers />
@@ -66,6 +67,12 @@ function CustomerDetail({ id }: { id: string }) {
           ) : undefined
         }
       />
+
+      {customer.isError && (
+        <p role="status" className="text-sm text-warn-fg">
+          Não foi possível atualizar. Mostrando os últimos dados.
+        </p>
+      )}
 
       <CustomerDataCard customer={customer.data} />
       <SavedCardsCard customerId={id} />

@@ -35,7 +35,7 @@ Painel do merchant e checkout hospedado do payment gateway (React 19, Vite, Tail
 | `/app/orders`        | a tela inicial: lista de pedidos (filtro por status, paginação) e o formulário de novo pedido à esquerda; à direita, o pedido escolhido                                                                  |
 | `/app/orders/:id`    | a mesma tela com o pedido aberto à direita: link de checkout, ações, estorno e tentativas                                                                                                                |
 | `/app/orders/new`    | redireciona para `/app/orders`, onde o formulário fica                                                                                                                                                   |
-| `/app/customers`     | lista de clientes                                                                                                                                                                                        |
+| `/app/customers`     | lista de clientes, com busca por nome ou por documento (CPF/CNPJ completo)                                                                                                                               |
 | `/app/customers/new` | novo cliente                                                                                                                                                                                             |
 | `/app/customers/:id` | um cliente: dados, cartões salvos, histórico de cobranças e assinaturas, editar, excluir e nova cobrança                                                                                                 |
 | `/app/subscriptions` | lista de assinaturas (filtro por status, paginação) à esquerda; à direita, a assinatura escolhida |
@@ -48,7 +48,12 @@ Painel do merchant e checkout hospedado do payment gateway (React 19, Vite, Tail
 O cartão pelo link (nova assinatura sem cartão salvo) e os filtros Incompletas e Expiradas dependem da
 assinatura por link do gateway (B2): antes dela, o gateway responde `CARD_REQUIRED` e esses filtros vêm vazios.
 
-Rotas da API usadas nas listas: `GET /v1/orders?status&limit&cursor` e `GET /v1/customers?limit&cursor`.
+Cobranças usam `GET /v1/orders?status&customer_id&limit&cursor`, `GET /v1/orders/{id}`, `GET /v1/orders/{id}/payments`,
+`POST /v1/orders`, `POST /v1/orders/{id}/cancel`, `POST /v1/orders/{id}/checkout-token/rotate` e
+`POST /v1/payments/{id}/refunds`.
+Clientes usam `GET /v1/customers?limit&cursor`, `GET /v1/customers?q` (nome contém), `GET /v1/customers?document`,
+`GET/PATCH/DELETE /v1/customers/{id}`, `POST /v1/customers`, `GET /v1/customers/{id}/cards`, `GET /v1/cards/{id}` e
+`DELETE /v1/cards/{id}`.
 Planos e configurações usam `GET/POST /v1/plans`, `PATCH /v1/plans/{id}` e `GET/PUT /v1/installment-settings`.
 Assinaturas usam `GET /v1/subscriptions?status&limit&cursor`, `GET /v1/subscriptions/{id}`,
 `GET /v1/subscriptions/{id}/orders`, `POST /v1/subscriptions`, `POST /v1/subscriptions/{id}/cancel`,

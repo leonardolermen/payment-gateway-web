@@ -83,7 +83,7 @@ describe("CustomersPage", () => {
     const search = screen.getByLabelText("Buscar por nome ou documento");
     const sentBefore = searches.length;
 
-    for (const partial of ["1234567890", "529.982.2", "52998224725 João"]) {
+    for (const partial of ["1234567890", "529.982.2", "52998224725 João", "Maria 529.982.247-25"]) {
       await userEvent.clear(search);
       await userEvent.type(search, partial);
       expect(await screen.findByText("Digite o documento completo")).toBeInTheDocument();

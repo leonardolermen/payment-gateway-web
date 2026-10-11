@@ -7,6 +7,7 @@ import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
 import { Table } from "../support/ui/Table";
 import { cardKeys, deleteCard, listCards } from "./cardApi";
+import { brandName } from "./cardLabels";
 import { customerKeys } from "./customerApi";
 import type { SavedCard } from "./types";
 
@@ -39,7 +40,7 @@ function SavedCardRow({ card, customerId }: { card: SavedCard; customerId: strin
 
   return (
     <tr>
-      <td className="font-medium">{card.brand}</td>
+      <td className="font-medium">{brandName(card.brand)}</td>
       <td className="font-mono text-xs whitespace-nowrap">final {card.last4}</td>
       <td className="font-mono text-xs">{card.expiry}</td>
       <td>{card.holder}</td>
@@ -65,8 +66,8 @@ function SavedCardRow({ card, customerId }: { card: SavedCard; customerId: strin
               onCancel={() => setConfirming(false)}
             >
               <p className="text-sm text-muted">
-                O cartão {card.brand} final {card.last4} deixa de poder ser cobrado. Se uma
-                assinatura cobra este cartão, a próxima cobrança vai falhar.
+                O cartão {brandName(card.brand)} final {card.last4} deixa de poder ser cobrado. Se
+                uma assinatura cobra este cartão, a próxima cobrança vai falhar.
               </p>
             </ConfirmDialog>
           )}

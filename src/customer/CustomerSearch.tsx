@@ -6,7 +6,9 @@ import { onlyDigits } from "./document";
 const DEBOUNCE_MS = 300;
 const DOCUMENT_LENGTH = 11;
 const DOCUMENT_SHAPE = /^[\d.\-/\s]+$/;
-const DOCUMENT_RUN = /\d{11,}/;
+// Eleven digits or more, each pair at most one ".", "-" or "/" apart: "529.982.247-25" inside a
+// name is as much a document as "52998224725".
+const DOCUMENT_RUN = /\d(?:[.\-/]?\d){10,}/;
 
 type Props = { onChange: (filter: CustomerFilter) => void };
 type Reading = { filter: CustomerFilter } | { incompleteDocument: true };

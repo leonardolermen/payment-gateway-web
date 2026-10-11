@@ -12,7 +12,7 @@ import { Badge } from "../support/ui/Badge";
 import { Card } from "../support/ui/Card";
 import { Table } from "../support/ui/Table";
 
-// The newest few, newest first: the history is a glance, the lists are where to dig.
+// The newest orders, newest first: the history is a glance, the orders list is where to dig.
 const HISTORY_SIZE = 10;
 
 type Props = { customerId: string };
@@ -75,8 +75,10 @@ function OrdersHistory({ customerId }: Props) {
   );
 }
 
+// All of the customer's subscriptions: with customer_id the gateway sends them unpaged and
+// ignores the limit.
 function SubscriptionsHistory({ customerId }: Props) {
-  const params = { customer_id: customerId, limit: HISTORY_SIZE };
+  const params = { customer_id: customerId };
   const subscriptions = useQuery({
     queryKey: subscriptionKeys.list(params),
     queryFn: () => listSubscriptions(params),

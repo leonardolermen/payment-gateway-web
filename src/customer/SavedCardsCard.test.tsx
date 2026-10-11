@@ -40,7 +40,7 @@ describe("SavedCardsCard", () => {
 
     const row = await rowOf("final 4242");
 
-    expect(within(row).getByText("VISA")).toBeInTheDocument();
+    expect(within(row).getByText("Visa")).toBeInTheDocument();
     expect(within(row).getByText("08/2029")).toBeInTheDocument();
     expect(within(row).getByText("MARIA SOUZA")).toBeInTheDocument();
   });

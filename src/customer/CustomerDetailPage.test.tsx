@@ -2,6 +2,7 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
+import { customerKeys } from "./customerApi";
 import { setAccessToken } from "../auth/session";
 import type { Role } from "../auth/types";
 import { aCustomer } from "../test/fixtures/customers";
@@ -212,5 +213,23 @@ describe("CustomerDetailPage", () => {
     expect(await screen.findByText("Lista de clientes")).toBeInTheDocument();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(customerGets).toBe(getsBeforeDelete);
+  });
+
+  it("aFailedRefetchKeepsThePageAndTheOpenDialog", async () => {
+    const { queryClient } = renderDetail("OWNER");
+    await userEvent.click(await screen.findByRole("button", { name: "Excluir cliente" }));
+    server.use(
+      http.get(`${API}/customers/cus_00000001`, () =>
+        HttpResponse.json({ type: "urn:gateway:INTERNAL", status: 503 }, { status: 503 }),
+      ),
+    );
+
+    await queryClient.invalidateQueries({ queryKey: customerKeys.detail("cus_00000001") });
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Não foi possível atualizar. Mostrando os últimos dados.",
+    );
+    expect(screen.getByRole("dialog", { name: "Excluir cliente?" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Maria Souza" })).toBeInTheDocument();
   });
 });
