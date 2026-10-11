@@ -7,12 +7,14 @@ import { GatewayRequestError, messageFor } from "../support/gatewayError";
 import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
 import { PageHeader } from "../support/ui/PageHeader";
+import { AddressFieldset } from "./AddressFieldset";
 import { createCustomer, customerKeys } from "./customerApi";
+import { fieldBinder, invalidFieldOf, type CustomerFields } from "./customerForm";
 import { onlyDigits } from "./document";
 import { TextField } from "./TextField";
 import type { NewCustomer } from "./types";
 
-const EMPTY = {
+const EMPTY: CustomerFields = {
   name: "",
   document: "",
   email: "",
@@ -23,21 +25,7 @@ const EMPTY = {
   zip: "",
 };
 
-type Fields = typeof EMPTY;
-
-// The API names the field as the client sent it ("customer.address.zip"); the form keys are flat.
-const FIELD_BY_API_NAME: Record<string, keyof Fields> = {
-  "customer.name": "name",
-  "customer.document": "document",
-  "customer.email": "email",
-  "customer.address.street": "street",
-  "customer.address.district": "district",
-  "customer.address.city": "city",
-  "customer.address.state": "state",
-  "customer.address.zip": "zip",
-};
-
-function toBody(fields: Fields): NewCustomer {
+function toBody(fields: CustomerFields): NewCustomer {
   const { street, district, city, state, zip } = fields;
   const hasAddress = [street, district, city, state, zip].some((value) => value.trim() !== "");
 
@@ -69,7 +57,7 @@ function NewCustomerForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const idempotencyKey = useRef(crypto.randomUUID());
-  const [fields, setFields] = useState<Fields>(EMPTY);
+  const [fields, setFields] = useState<CustomerFields>(EMPTY);
 
   const create = useMutation({
     mutationFn: (body: NewCustomer) => createCustomer(body, idempotencyKey.current),
@@ -81,21 +69,8 @@ function NewCustomerForm() {
 
   const failure = create.error instanceof GatewayRequestError ? create.error.error : null;
   const duplicateId = failure?.code === "CUSTOMER_EXISTS" ? failure.extras.customer_id : undefined;
-  const invalidField = failure?.field ? FIELD_BY_API_NAME[failure.field] : undefined;
-
-  // A field error belongs next to its input; anything else goes in the alert.
-  function errorFor(name: keyof Fields): string | undefined {
-    return invalidField === name ? failure?.detail : undefined;
-  }
-
-  function bind(name: keyof Fields) {
-    return {
-      value: fields[name],
-      error: errorFor(name),
-      onChange: (event: { target: { value: string } }) =>
-        setFields({ ...fields, [name]: event.target.value }),
-    };
-  }
+  const invalidField = invalidFieldOf(create.error);
+  const bind = fieldBinder(fields, setFields, create.error);
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -112,14 +87,7 @@ function NewCustomerForm() {
           <TextField label="Documento" {...bind("document")} />
           <TextField label="E-mail" type="email" {...bind("email")} />
 
-          <fieldset className="space-y-3 border-t border-line pt-4">
-            <legend className="pr-2 text-sm font-medium text-muted">Endereço (opcional)</legend>
-            <TextField label="Rua" {...bind("street")} />
-            <TextField label="Bairro" {...bind("district")} />
-            <TextField label="Cidade" {...bind("city")} />
-            <TextField label="UF" maxLength={2} {...bind("state")} />
-            <TextField label="CEP" {...bind("zip")} />
-          </fieldset>
+          <AddressFieldset legend="Endereço (opcional)" bind={bind} />
 
           {create.isError && !invalidField && (
             <p role="alert" className="text-sm text-danger">

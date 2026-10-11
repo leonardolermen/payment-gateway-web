@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useCan } from "../auth/useCan";
 import { ConfirmDialog } from "../support/ConfirmDialog";
-import { GatewayRequestError, messageFor } from "../support/gatewayError";
+import { conflictMessageFor } from "../support/gatewayError";
 import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
 import { Table } from "../support/ui/Table";
@@ -13,16 +13,6 @@ import type { SavedCard } from "./types";
 const HEADERS = ["Bandeira", "Final", "Validade", "Titular"];
 
 type Props = { customerId: string };
-
-// The 409 says which subscription still charges this card; the gateway's own words are the
-// useful part, and its code is not one the panel has a message for.
-function removalError(error: unknown): string {
-  if (error instanceof GatewayRequestError && error.error.status === 409 && error.error.detail) {
-    return error.error.detail;
-  }
-
-  return messageFor(error);
-}
 
 function SavedCardRow({ card, customerId }: { card: SavedCard; customerId: string }) {
   const queryClient = useQueryClient();
@@ -54,9 +44,10 @@ function SavedCardRow({ card, customerId }: { card: SavedCard; customerId: strin
             Remover
           </Button>
 
+          {/* The 409 says which subscription still charges this card. */}
           {removal.isError && (
             <p role="alert" className="text-sm text-danger">
-              {removalError(removal.error)}
+              {conflictMessageFor(removal.error)}
             </p>
           )}
 
