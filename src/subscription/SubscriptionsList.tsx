@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { Link, useMatch, useNavigate } from "react-router";
 import { METHOD_LABELS } from "../order/methodLabels";
 import { formatDateTime } from "../support/dates";
@@ -14,8 +14,7 @@ import type { SubscriptionStatus } from "./types";
 
 const HEADERS = ["Cliente", "Plano", "Método", "Status", "Próxima cobrança"];
 
-// INCOMPLETE_EXPIRED has no option of its own: the gateway may answer it under "Encerradas", and
-// the list shows whatever comes back.
+// "Encerradas" sends ENDED only; a first payment that expired is INCOMPLETE_EXPIRED, its own filter.
 const FILTERS: { label: string; value: SubscriptionStatus | "" }[] = [
   { label: "Todas", value: "" },
   { label: "Ativas", value: "ACTIVE" },
@@ -23,6 +22,7 @@ const FILTERS: { label: string; value: SubscriptionStatus | "" }[] = [
   { label: "Incompletas", value: "INCOMPLETE" },
   { label: "Canceladas", value: "CANCELED" },
   { label: "Encerradas", value: "ENDED" },
+  { label: "Expiradas", value: "INCOMPLETE_EXPIRED" },
 ];
 
 export function SubscriptionsList() {
@@ -44,6 +44,15 @@ export function SubscriptionsList() {
   });
 
   const subscriptions = query.data?.pages.flat() ?? [];
+
+  function openFromRow(event: MouseEvent, id: string) {
+    // A click on the customer link already navigated; a second push would need two "back"s.
+    if ((event.target as HTMLElement).closest("a")) {
+      return;
+    }
+
+    navigate(`/app/subscriptions/${id}`);
+  }
 
   return (
     <section className="space-y-3">
@@ -84,7 +93,7 @@ export function SubscriptionsList() {
               <tr
                 key={subscription.id}
                 data-selected={isSelected}
-                onClick={() => navigate(`/app/subscriptions/${subscription.id}`)}
+                onClick={(event) => openFromRow(event, subscription.id)}
                 className="cursor-pointer hover:bg-surface-muted data-[selected=true]:bg-surface-muted data-[selected=true]:shadow-[inset_3px_0_0_var(--color-accent)]"
               >
                 <td>

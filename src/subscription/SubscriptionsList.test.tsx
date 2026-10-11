@@ -136,6 +136,24 @@ describe("SubscriptionsList", () => {
     expect(screen.getAllByRole("row")[1]).toHaveAttribute("data-selected", "true");
   });
 
+  // The link sits inside the clickable row: one click must be one history entry, not two.
+  it("clickingTheLinkNavigatesOnce", async () => {
+    servePlans();
+    serveSubscriptions(() => [aSubscription({ id: "sub_a" })]);
+    const { router } = renderList();
+    const navigations: string[] = [];
+    router.subscribe((state) => {
+      if (state.navigation.state === "idle") {
+        navigations.push(state.location.key);
+      }
+    });
+
+    await userEvent.click(await screen.findByRole("link", { name: "Maria Souza" }));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe("/app/subscriptions/sub_a"));
+    expect(new Set(navigations).size).toBe(1);
+  });
+
   it("statusFilterIsSentToTheApi", async () => {
     servePlans();
     const searches = serveSubscriptions(() => []);
@@ -146,7 +164,15 @@ describe("SubscriptionsList", () => {
       within(filter)
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["Todas", "Ativas", "Em atraso", "Incompletas", "Canceladas", "Encerradas"]);
+    ).toEqual([
+      "Todas",
+      "Ativas",
+      "Em atraso",
+      "Incompletas",
+      "Canceladas",
+      "Encerradas",
+      "Expiradas",
+    ]);
 
     await userEvent.selectOptions(filter, "Em atraso");
     await waitFor(() => expect(searches.at(-1)?.get("status")).toBe("PAST_DUE"));
@@ -156,23 +182,23 @@ describe("SubscriptionsList", () => {
     expect(searches[0]?.has("status")).toBe(false);
   });
 
-  // The gateway may file an expired first payment under ENDED; the list shows whatever it answers.
-  it("endedAlsoShowsExpiredIncompleteRows", async () => {
+  // An expired first payment has a status of its own; "Encerradas" asks for ENDED only.
+  it("expiredHasItsOwnFilter", async () => {
     servePlans();
-    serveSubscriptions((search) =>
-      search.get("status") === "ENDED"
-        ? [
-            aSubscription({ id: "sub_ended", status: "ENDED" }),
-            aSubscription({ id: "sub_expired", status: "INCOMPLETE_EXPIRED" }),
-          ]
+    const searches = serveSubscriptions((search) =>
+      search.get("status") === "INCOMPLETE_EXPIRED"
+        ? [aSubscription({ id: "sub_expired", status: "INCOMPLETE_EXPIRED" })]
         : [],
     );
     renderList();
 
-    await userEvent.selectOptions(await screen.findByLabelText("Status"), "Encerradas");
+    const filter = await screen.findByLabelText("Status");
+    await userEvent.selectOptions(filter, "Encerradas");
+    await waitFor(() => expect(searches.at(-1)?.get("status")).toBe("ENDED"));
 
-    expect(await screen.findByText("Encerrada")).toBeInTheDocument();
-    expect(screen.getByText("Expirada")).toHaveClass("bg-neutral-bg");
+    await userEvent.selectOptions(filter, "Expiradas");
+    await waitFor(() => expect(searches.at(-1)?.get("status")).toBe("INCOMPLETE_EXPIRED"));
+    expect(await screen.findByText("Expirada")).toHaveClass("bg-neutral-bg");
   });
 
   it("loadMoreRequestsTheNextCursor", async () => {

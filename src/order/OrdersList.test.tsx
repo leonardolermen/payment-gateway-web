@@ -60,6 +60,23 @@ describe("OrdersList", () => {
     expect(screen.getAllByRole("row")[1]).toHaveAttribute("data-selected", "true");
   });
 
+  // The date link sits inside the clickable row: one click must be one history entry, not two.
+  it("clickingTheLinkNavigatesOnce", async () => {
+    server.use(http.get(ORDERS_URL, () => HttpResponse.json([anOrder({ id: "ord_a" })])));
+    const { router } = renderPage();
+    const navigations: string[] = [];
+    router.subscribe((state) => {
+      if (state.navigation.state === "idle") {
+        navigations.push(state.location.key);
+      }
+    });
+
+    await userEvent.click(await screen.findByRole("link"));
+
+    await waitFor(() => expect(router.state.location.pathname).toBe("/app/orders/ord_a"));
+    expect(new Set(navigations).size).toBe(1);
+  });
+
   it("newOrderAsksTheWorkspaceForTheForm", async () => {
     const onNewOrder = vi.fn();
     server.use(http.get(ORDERS_URL, () => HttpResponse.json([])));
