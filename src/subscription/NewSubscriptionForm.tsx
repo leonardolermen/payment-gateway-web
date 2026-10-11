@@ -82,7 +82,7 @@ function NewSubscriptionFields() {
       // inside the response must not.
       void queryClient.invalidateQueries({ queryKey: subscriptionKeys.all });
 
-      if (subscription.latest_order?.checkout_url) {
+      if (subscription.first_invoice !== null) {
         setAwaitingCard(subscription);
         return;
       }
@@ -122,10 +122,10 @@ function NewSubscriptionFields() {
     create.mutate(body);
   }
 
-  if (awaitingCard?.latest_order) {
+  if (awaitingCard?.first_invoice) {
     return (
       <SubscriptionLinkPanel
-        firstOrder={awaitingCard.latest_order}
+        firstInvoice={awaitingCard.first_invoice}
         onDone={() => navigate(`/app/subscriptions/${awaitingCard.id}`)}
       />
     );

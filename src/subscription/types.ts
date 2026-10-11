@@ -13,6 +13,8 @@ export type DunningAttempt = {
   outcome: DunningOutcome | null;
 };
 
+export type FirstInvoice = { order_id: string; checkout_url: string };
+
 // Field names mirror the API (snake_case) on purpose, as in order/types.ts.
 export type Subscription = {
   id: string;
@@ -27,12 +29,15 @@ export type Subscription = {
   next_billing_at: string | null;
   cancel_at_period_end: boolean;
   latest_order: Order | null;
+  // Only on the POST that answers INCOMPLETE (CARD without card_id): the first invoice's checkout
+  // link, handed out once. Null on every GET.
+  first_invoice: FirstInvoice | null;
   dunning: DunningAttempt[];
   created_at: string;
 };
 
 // CARD without card_id: the gateway answers INCOMPLETE and the payer registers the card through
-// latest_order.checkout_url. start_at is a São Paulo calendar day, "YYYY-MM-DD".
+// first_invoice.checkout_url. start_at is a São Paulo calendar day, "YYYY-MM-DD".
 export type NewSubscription = {
   customer_id: string;
   plan_id: string;

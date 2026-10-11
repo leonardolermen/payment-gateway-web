@@ -3,6 +3,8 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { setAccessToken } from "../auth/session";
+import { orderKeys } from "../order/orderApi";
+import { anOrder } from "../test/fixtures/orders";
 import { aSubscription } from "../test/fixtures/subscriptions";
 import { aMe } from "../test/me";
 import { server } from "../test/msw/server";
@@ -86,6 +88,7 @@ describe("CancelSubscriptionDialog", () => {
     serveCancel(() => HttpResponse.json(aSubscription({ status: "CANCELED" })));
     const { onClose, queryClient } = renderDialog();
     queryClient.setQueryData(subscriptionKeys.detail("sub_00000001"), aSubscription());
+    queryClient.setQueryData(orderKeys.detail("ord_invoice"), anOrder());
 
     await userEvent.click(screen.getByRole("button", { name: "Cancelar assinatura" }));
 
@@ -93,6 +96,8 @@ describe("CancelSubscriptionDialog", () => {
     expect(queryClient.getQueryState(subscriptionKeys.detail("sub_00000001"))?.isInvalidated).toBe(
       true,
     );
+    // A cancel now cancels the open invoice too.
+    expect(queryClient.getQueryState(orderKeys.detail("ord_invoice"))?.isInvalidated).toBe(true);
   });
 
   it("keepsTheKeyAfterAnUncertainFailure", async () => {

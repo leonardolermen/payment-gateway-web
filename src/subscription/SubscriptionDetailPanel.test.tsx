@@ -1,4 +1,4 @@
-import { act, screen, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -151,14 +151,29 @@ describe("SubscriptionDetailPanel", () => {
     },
   );
 
-  // INCOMPLETE is not billable at the gateway: cancel and change both answer 409 there.
-  it("offersNoActionOnAnIncompleteSubscription", async () => {
+  // INCOMPLETE has no period to end at: the gateway cancels it only now, and changes nothing.
+  it("anIncompleteSubscriptionOffersOnlyCancelNow", async () => {
     serve(aSubscription({ status: "INCOMPLETE", method: "CARD", card_id: null }));
+    const sent: unknown[] = [];
+    server.use(
+      http.post(`${SUBSCRIPTION}/cancel`, async ({ request }) => {
+        sent.push(await request.json());
+        return HttpResponse.json(aSubscription({ status: "CANCELED" }));
+      }),
+    );
     renderPanel("OWNER");
 
-    await screen.findByRole("region", { name: "Assinatura sub_00000001" });
-    expect(screen.queryByRole("button", { name: /Cancelar/ })).not.toBeInTheDocument();
+    await userEvent.click(await screen.findByRole("button", { name: "Cancelar agora" }));
     expect(screen.queryByRole("button", { name: "Trocar método" })).not.toBeInTheDocument();
+
+    const dialog = screen.getByRole("dialog", { name: "Cancelar agora?" });
+    expect(
+      within(dialog).queryByRole("radio", { name: "No fim do período" }),
+    ).not.toBeInTheDocument();
+    expect(dialog).toHaveTextContent("o link da primeira fatura deixa de valer");
+    await userEvent.click(within(dialog).getByRole("button", { name: "Cancelar agora" }));
+
+    await waitFor(() => expect(sent).toEqual([{ at_period_end: false }]));
   });
 
   it.each(["ACTIVE", "PAST_DUE"] as const)(
@@ -173,7 +188,7 @@ describe("SubscriptionDetailPanel", () => {
 
       await userEvent.click(screen.getByRole("button", { name: "Cancelar agora" }));
 
-      const dialog = screen.getByRole("dialog", { name: "Cancelar assinatura?" });
+      const dialog = screen.getByRole("dialog", { name: "Cancelar agora?" });
       expect(
         within(dialog).queryByRole("radio", { name: "No fim do período" }),
       ).not.toBeInTheDocument();

@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { orderKeys } from "../order/orderApi";
 import { ConfirmDialog } from "../support/ConfirmDialog";
 import { messageFor, provesNothingWasCreated } from "../support/gatewayError";
 import { useIdempotencyKey } from "../support/useIdempotencyKey";
 import { cancelSubscription, subscriptionKeys } from "./subscriptionApi";
+import { cancelsOnlyNow } from "./subscriptionRules";
 import type { Subscription } from "./types";
 
 type Props = { subscription: Subscription; onClose: () => void };
@@ -23,12 +25,26 @@ const NOW: When = {
   hint: "Ela termina agora. A fatura em aberto também é cancelada no banco.",
 };
 
+// Waiting for the first payment: no bank attempt yet, only the link the payer holds.
+const NOW_BEFORE_THE_FIRST_PAYMENT: When = {
+  ...NOW,
+  hint: "Ela termina agora, e o link da primeira fatura deixa de valer.",
+};
+
+function optionsFor(subscription: Subscription): When[] {
+  if (subscription.status === "INCOMPLETE") {
+    return [NOW_BEFORE_THE_FIRST_PAYMENT];
+  }
+
+  return cancelsOnlyNow(subscription) ? [NOW] : [AT_PERIOD_END, NOW];
+}
+
 export function CancelSubscriptionDialog({ subscription, onClose }: Props) {
   const queryClient = useQueryClient();
-  // A cancel already scheduled for the end of the period leaves only "now" to choose.
-  const options = subscription.cancel_at_period_end ? [NOW] : [AT_PERIOD_END, NOW];
-  // The end of the period is the default: the payer already paid for it.
-  const [atPeriodEnd, setAtPeriodEnd] = useState(!subscription.cancel_at_period_end);
+  const onlyNow = cancelsOnlyNow(subscription);
+  const options = optionsFor(subscription);
+  // The end of the period is the default when there is one: the payer already paid for it.
+  const [atPeriodEnd, setAtPeriodEnd] = useState(!onlyNow);
 
   // One key until a clear answer, as on create: a lost response is retried, not sent anew.
   const idempotencyKey = useIdempotencyKey();
@@ -43,15 +59,19 @@ export function CancelSubscriptionDialog({ subscription, onClose }: Props) {
     },
     onSuccess: async () => {
       idempotencyKey.renew();
-      await queryClient.invalidateQueries({ queryKey: subscriptionKeys.all });
+      // Canceling now cancels the open invoice too: the orders list must not keep it open.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: subscriptionKeys.all }),
+        queryClient.invalidateQueries({ queryKey: orderKeys.all }),
+      ]);
       onClose();
     },
   });
 
   return (
     <ConfirmDialog
-      title="Cancelar assinatura?"
-      confirmLabel="Cancelar assinatura"
+      title={onlyNow ? "Cancelar agora?" : "Cancelar assinatura?"}
+      confirmLabel={onlyNow ? "Cancelar agora" : "Cancelar assinatura"}
       pending={cancel.isPending}
       error={cancel.isError ? messageFor(cancel.error) : null}
       onConfirm={() => cancel.mutate()}

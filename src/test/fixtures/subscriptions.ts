@@ -13,6 +13,7 @@ export function aSubscription(overrides: Partial<Subscription> = {}): Subscripti
     next_billing_at: "2026-11-06T12:00:00Z",
     cancel_at_period_end: false,
     latest_order: null,
+    first_invoice: null,
     dunning: [],
     created_at: "2026-10-06T12:00:00Z",
     ...overrides,

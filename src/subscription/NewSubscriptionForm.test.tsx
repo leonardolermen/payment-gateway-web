@@ -6,7 +6,6 @@ import { setAccessToken } from "../auth/session";
 import type { Role } from "../auth/types";
 import type { SavedCard } from "../customer/types";
 import { aCustomer, aSavedCard } from "../test/fixtures/customers";
-import { anOrder } from "../test/fixtures/orders";
 import { aPlan } from "../test/fixtures/plans";
 import { aSubscription } from "../test/fixtures/subscriptions";
 import { aMe } from "../test/me";
@@ -213,7 +212,7 @@ describe("NewSubscriptionForm", () => {
       created({
         status: "INCOMPLETE",
         method: "CARD",
-        latest_order: anOrder({ id: "ord_first", status: "OPEN", checkout_url: LINK }),
+        first_invoice: { order_id: "ord_first", checkout_url: LINK },
       }),
     );
     const { router, queryClient } = renderForm();

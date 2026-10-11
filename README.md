@@ -45,6 +45,9 @@ Painel do merchant e checkout hospedado do payment gateway (React 19, Vite, Tail
 | `/app/settings`      | configurações, em abas: Conta (loja e ambiente), Minha conta (nome e senha), Parcelamento (máximo, sem juros até, juros ao mês, prévia do que o pagador vê), Provedores (só para o dono: credenciais do Itaú para Pix/boleto e da Cielo para cartão, por ambiente, com testar conexão, chave de notificação da Cielo e a URL de webhook para registrar no banco) e Equipe (convites e papéis, só para o dono) |
 | `/pay/:token`        | checkout do pagador: Pix, boleto ou cartão (sem chave, o token vem na URL)                                                                                                                               |
 
+O cartão pelo link (nova assinatura sem cartão salvo) e os filtros Incompletas e Expiradas dependem da
+assinatura por link do gateway (B2): antes dela, o gateway responde `CARD_REQUIRED` e esses filtros vêm vazios.
+
 Rotas da API usadas nas listas: `GET /v1/orders?status&limit&cursor` e `GET /v1/customers?limit&cursor`.
 Planos e configurações usam `GET/POST /v1/plans`, `PATCH /v1/plans/{id}` e `GET/PUT /v1/installment-settings`.
 Assinaturas usam `GET /v1/subscriptions?status&limit&cursor`, `GET /v1/subscriptions/{id}`,
