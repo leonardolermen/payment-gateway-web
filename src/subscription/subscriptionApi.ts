@@ -1,6 +1,6 @@
 import type { Order } from "../order/types";
 import { merchantRequest } from "../support/merchantRequest";
-import type { Subscription, SubscriptionStatus } from "./types";
+import type { NewSubscription, Subscription, SubscriptionStatus } from "./types";
 
 export const SUBSCRIPTION_PAGE_SIZE = 20;
 
@@ -47,5 +47,17 @@ export async function getSubscription(id: string): Promise<Subscription> {
 // Newest first, as the gateway sends them.
 export async function listSubscriptionOrders(id: string): Promise<Order[]> {
   const { data } = await merchantRequest<Order[]>(`/v1/subscriptions/${id}/orders`);
+  return data;
+}
+
+export async function createSubscription(
+  body: NewSubscription,
+  idempotencyKey: string,
+): Promise<Subscription> {
+  const { data } = await merchantRequest<Subscription>("/v1/subscriptions", {
+    method: "POST",
+    body,
+    idempotencyKey,
+  });
   return data;
 }

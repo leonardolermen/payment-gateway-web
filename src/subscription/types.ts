@@ -27,3 +27,13 @@ export type Subscription = {
   dunning: DunningAttempt[];
   created_at: string;
 };
+
+// CARD without card_id: the gateway answers INCOMPLETE and the payer registers the card through
+// latest_order.checkout_url. start_at is a São Paulo calendar day, "YYYY-MM-DD".
+export type NewSubscription = {
+  customer_id: string;
+  plan_id: string;
+  method: PaymentMethod;
+  card_id?: string;
+  start_at?: string;
+};

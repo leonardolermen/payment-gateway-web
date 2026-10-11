@@ -16,7 +16,9 @@ type Props = {
 };
 type Mode = "existing" | "new";
 
-function ExistingCustomer({ value, onChange, preselected }: Props) {
+// Exported alone for the subscription form: a subscription needs a customer_id, so it has no
+// inline "new customer" mode.
+export function ExistingCustomer({ value, onChange, preselected }: Props) {
   const [document, setDocument] = useState("");
   const [found, setFound] = useState<Customer | null | undefined>(undefined);
   const search = useMutation({ mutationFn: findByDocument, onSuccess: setFound });

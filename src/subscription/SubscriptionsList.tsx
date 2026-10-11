@@ -1,9 +1,11 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState, type MouseEvent } from "react";
 import { Link, useMatch, useNavigate } from "react-router";
+import { useCan } from "../auth/useCan";
 import { METHOD_LABELS } from "../order/methodLabels";
 import { formatDateTime } from "../support/dates";
 import { Button } from "../support/ui/Button";
+import { buttonClasses } from "../support/ui/buttonClasses";
 import { Card } from "../support/ui/Card";
 import { PageHeader } from "../support/ui/PageHeader";
 import { Table } from "../support/ui/Table";
@@ -28,6 +30,7 @@ const FILTERS: { label: string; value: SubscriptionStatus | "" }[] = [
 export function SubscriptionsList() {
   const selectedId = useMatch("/app/subscriptions/:id")?.params.id;
   const navigate = useNavigate();
+  const mayCreateSubscription = useCan("create_subscription");
   const [status, setStatus] = useState<SubscriptionStatus | "">("");
   const filter = status || undefined;
 
@@ -59,20 +62,27 @@ export function SubscriptionsList() {
       <PageHeader
         title="Assinaturas"
         action={
-          <label className="flex items-center gap-2 rounded-pill border border-line bg-surface py-1 pr-1 pl-3 text-xs text-muted">
-            Status{" "}
-            <select
-              value={status}
-              onChange={(event) => setStatus(event.target.value as SubscriptionStatus | "")}
-              className="rounded-pill bg-transparent py-1 pr-1 font-semibold text-ink outline-none"
-            >
-              {FILTERS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 rounded-pill border border-line bg-surface py-1 pr-1 pl-3 text-xs text-muted">
+              Status{" "}
+              <select
+                value={status}
+                onChange={(event) => setStatus(event.target.value as SubscriptionStatus | "")}
+                className="rounded-pill bg-transparent py-1 pr-1 font-semibold text-ink outline-none"
+              >
+                {FILTERS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {mayCreateSubscription && (
+              <Link to="/app/subscriptions/new" className={buttonClasses()}>
+                <span aria-hidden="true">+</span>Nova assinatura
+              </Link>
+            )}
+          </div>
         }
       />
 

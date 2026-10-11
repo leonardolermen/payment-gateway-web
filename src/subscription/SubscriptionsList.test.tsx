@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { setAccessToken } from "../auth/session";
+import type { Role } from "../auth/types";
 import { aPlan } from "../test/fixtures/plans";
 import { aSubscription } from "../test/fixtures/subscriptions";
 import { aMe } from "../test/me";
@@ -38,14 +39,14 @@ function serveSubscriptions(answer: (search: URLSearchParams) => Subscription[])
   return searches;
 }
 
-function renderList() {
+function renderList(role: Role = "OWNER") {
   setAccessToken("gs_test");
   return renderWithProviders(
     [
       { path: "/app/subscriptions", element: <SubscriptionsList /> },
       { path: "/app/subscriptions/:id", element: <SubscriptionsList /> },
     ],
-    { initialEntries: ["/app/subscriptions"], me: aMe({ role: "OWNER" }) },
+    { initialEntries: ["/app/subscriptions"], me: aMe({ role }) },
   );
 }
 
@@ -199,6 +200,26 @@ describe("SubscriptionsList", () => {
     await userEvent.selectOptions(filter, "Expiradas");
     await waitFor(() => expect(searches.at(-1)?.get("status")).toBe("INCOMPLETE_EXPIRED"));
     expect(await screen.findByText("Expirada")).toHaveClass("bg-neutral-bg");
+  });
+
+  it("newSubscriptionIsALinkForFinance", async () => {
+    servePlans();
+    serveSubscriptions(() => []);
+    renderList("FINANCE");
+
+    expect(await screen.findByRole("link", { name: /Nova assinatura/ })).toHaveAttribute(
+      "href",
+      "/app/subscriptions/new",
+    );
+  });
+
+  it("readOnlyDoesNotSeeNewSubscription", async () => {
+    servePlans();
+    serveSubscriptions(() => []);
+    renderList("READONLY");
+
+    await screen.findByText("Nenhuma assinatura por aqui.");
+    expect(screen.queryByRole("link", { name: /Nova assinatura/ })).not.toBeInTheDocument();
   });
 
   it("loadMoreRequestsTheNextCursor", async () => {

@@ -1,0 +1,222 @@
+import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router";
+import { useCan } from "../auth/useCan";
+import { listCards } from "../customer/cardApi";
+import { customerKeys } from "../customer/customerApi";
+import { ExistingCustomer } from "../customer/CustomerPicker";
+import { TextField } from "../customer/TextField";
+import type { CustomerChoice } from "../customer/types";
+import type { PaymentMethod } from "../order/types";
+import { listPlans, planKeys } from "../plan/planApi";
+import { priceLabel } from "../plan/planLabels";
+import { messageFor } from "../support/gatewayError";
+import { Button } from "../support/ui/Button";
+import { Card } from "../support/ui/Card";
+import { Field } from "../support/ui/Field";
+import { INPUT_CLASSES } from "../support/ui/inputClasses";
+import { useIdempotencyKey } from "../support/useIdempotencyKey";
+import { NoSubscriptionSelected } from "./NoSubscriptionSelected";
+import { SavedCardSelect } from "./SavedCardSelect";
+import { createSubscription, subscriptionKeys } from "./subscriptionApi";
+import { SubscriptionLinkPanel } from "./SubscriptionLinkPanel";
+import type { NewSubscription, Subscription } from "./types";
+
+const METHODS: { label: string; value: PaymentMethod }[] = [
+  { label: "Pix", value: "PIX" },
+  { label: "Boleto", value: "BOLECODE" },
+  { label: "Cartão", value: "CARD" },
+];
+
+// A deep link from a role that cannot create lands on the hint, as the list shows no button.
+export function NewSubscriptionForm() {
+  const mayCreateSubscription = useCan("create_subscription");
+
+  if (!mayCreateSubscription) {
+    return <NoSubscriptionSelected />;
+  }
+
+  return <NewSubscriptionFields />;
+}
+
+function NewSubscriptionFields() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+
+  const idempotencyKey = useIdempotencyKey();
+  // The body the current key was minted for: a changed form is a new intent and gets a new key.
+  const sentBody = useRef<string | null>(null);
+
+  const [customerId, setCustomerId] = useState<string | null>(null);
+  const [planId, setPlanId] = useState("");
+  const [method, setMethod] = useState<PaymentMethod>("PIX");
+  // undefined until the select is touched; until then the first saved card is the choice.
+  const [cardChoice, setCardChoice] = useState<string | null | undefined>(undefined);
+  const [startAt, setStartAt] = useState("");
+  const [missing, setMissing] = useState({ customer: false, plan: false });
+  const [awaitingCard, setAwaitingCard] = useState<Subscription | null>(null);
+
+  const plans = useQuery({ queryKey: planKeys.list(true), queryFn: () => listPlans(true) });
+
+  const wantsCards = method === "CARD" && customerId !== null;
+  const cards = useQuery({
+    queryKey: customerKeys.cards(customerId ?? ""),
+    queryFn: wantsCards && customerId !== null ? () => listCards(customerId) : skipToken,
+  });
+  const savedCards = cards.data ?? [];
+  const cardId = cardChoice === undefined ? (savedCards[0]?.id ?? null) : cardChoice;
+  // Submitting before the cards arrive would silently pick the link.
+  const cardsLoading = wantsCards && cards.isPending;
+
+  const create = useMutation({
+    mutationFn: (body: NewSubscription) => createSubscription(body, idempotencyKey.current()),
+    // The response may carry the one-time checkout link: the mutation is dropped with the form.
+    gcTime: 0,
+    onSuccess: (subscription) => {
+      idempotencyKey.renew();
+      sentBody.current = null;
+
+      // Invalidated, never seeded with the response: the cache outlives this panel, and the link
+      // inside the response must not.
+      void queryClient.invalidateQueries({ queryKey: subscriptionKeys.all });
+
+      if (subscription.latest_order?.checkout_url) {
+        setAwaitingCard(subscription);
+        return;
+      }
+
+      navigate(`/app/subscriptions/${subscription.id}`);
+    },
+  });
+
+  function chooseCustomer(choice: CustomerChoice | null) {
+    setCustomerId(choice !== null && "customer_id" in choice ? choice.customer_id : null);
+    // Another customer has other cards.
+    setCardChoice(undefined);
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault();
+
+    setMissing({ customer: customerId === null, plan: planId === "" });
+
+    if (customerId === null || planId === "") {
+      return;
+    }
+
+    const body: NewSubscription = {
+      customer_id: customerId,
+      plan_id: planId,
+      method,
+      ...(method === "CARD" && cardId !== null && { card_id: cardId }),
+      ...(startAt !== "" && { start_at: startAt }),
+    };
+
+    // Same body, same key: a retry after a 5xx or a lost response replays the subscription
+    // instead of creating a second one.
+    const serialized = JSON.stringify(body);
+    if (serialized !== sentBody.current) {
+      idempotencyKey.renew();
+      sentBody.current = serialized;
+    }
+
+    create.mutate(body);
+  }
+
+  if (awaitingCard?.latest_order) {
+    return (
+      <SubscriptionLinkPanel
+        firstOrder={awaitingCard.latest_order}
+        onDone={() => navigate(`/app/subscriptions/${awaitingCard.id}`)}
+      />
+    );
+  }
+
+  return (
+    <Card>
+      <h2 className="mb-4 font-display text-[15px] font-semibold">Nova assinatura</h2>
+
+      <form onSubmit={submit} className="space-y-4" noValidate>
+        {/* Existing customers only: the subscription API takes a customer_id, never an inline one. */}
+        <fieldset className="space-y-3">
+          <legend className="pr-2 text-[10px] font-medium tracking-wider text-muted uppercase">
+            Cliente
+          </legend>
+          <ExistingCustomer
+            value={customerId !== null ? { customer_id: customerId } : null}
+            onChange={chooseCustomer}
+          />
+          {missing.customer && <p className="text-sm text-danger">Escolha um cliente.</p>}
+        </fieldset>
+
+        <Field
+          label="Plano"
+          htmlFor="subscription-plan"
+          error={missing.plan ? "Escolha um plano." : undefined}
+        >
+          <select
+            id="subscription-plan"
+            value={planId}
+            className={INPUT_CLASSES}
+            onChange={(event) => setPlanId(event.target.value)}
+          >
+            <option value="">Escolha um plano</option>
+            {plans.data?.map((plan) => (
+              <option key={plan.id} value={plan.id}>
+                {plan.name} · {priceLabel(plan)}
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        {plans.isError && (
+          <p className="text-sm text-danger">Não foi possível carregar os planos.</p>
+        )}
+
+        <fieldset className="space-y-2">
+          <legend className="pr-2 text-[10px] font-medium tracking-wider text-muted uppercase">
+            Método
+          </legend>
+          <div className="flex gap-4 text-sm [&_input]:accent-accent">
+            {METHODS.map((option) => (
+              <label key={option.value}>
+                <input
+                  type="radio"
+                  name="subscription-method"
+                  checked={method === option.value}
+                  onChange={() => setMethod(option.value)}
+                />{" "}
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </fieldset>
+
+        {wantsCards && !cards.isPending && (
+          <SavedCardSelect cards={savedCards} value={cardId} onChange={setCardChoice} />
+        )}
+
+        {wantsCards && cards.isError && (
+          <p className="text-sm text-danger">Não foi possível carregar os cartões salvos.</p>
+        )}
+
+        <TextField
+          label="Início"
+          type="date"
+          value={startAt}
+          onChange={(event) => setStartAt(event.target.value)}
+        />
+
+        {create.isError && (
+          <p role="alert" className="text-sm text-danger">
+            {messageFor(create.error)}
+          </p>
+        )}
+
+        <Button type="submit" size="lg" disabled={create.isPending || cardsLoading}>
+          Criar assinatura
+        </Button>
+      </form>
+    </Card>
+  );
+}
