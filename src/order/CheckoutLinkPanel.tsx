@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
 import { useCan } from "../auth/useCan";
+import { ConfirmDialog } from "../support/ConfirmDialog";
 import { copyToClipboard } from "../support/copyToClipboard";
 import { messageFor } from "../support/gatewayError";
 import { RestartAttempt } from "../support/RestartAttempt";
@@ -17,6 +18,7 @@ export function CheckoutLinkPanel({ order, initialUrl, children }: Props) {
   const queryClient = useQueryClient();
   const [url, setUrl] = useState(initialUrl);
   const [copied, setCopied] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const canRotate = useCan("rotate_checkout_link");
 
   const rotateKey = useIdempotencyKey();
@@ -27,6 +29,7 @@ export function CheckoutLinkPanel({ order, initialUrl, children }: Props) {
     onError: (error) => rotateKey.renewIfNothingWasCreated(error),
     // The rotated link is shown once: the mutation that holds it goes away with the panel.
     gcTime: 0,
+    onSettled: () => setConfirming(false),
     onSuccess: async (rotated) => {
       rotateKey.renew();
       setUrl(rotated.checkout_url);
@@ -74,13 +77,27 @@ export function CheckoutLinkPanel({ order, initialUrl, children }: Props) {
             variant="ghost"
             size="sm"
             disabled={rotate.isPending}
-            onClick={() => rotate.mutate()}
+            onClick={() => setConfirming(true)}
           >
             Gerar novo link
           </Button>
         )}
         {children}
       </div>
+
+      {/* Rotating kills the link the payer already holds: never on a single stray click. */}
+      {confirming && (
+        <ConfirmDialog
+          title="Gerar um link novo?"
+          confirmLabel="Gerar"
+          pending={rotate.isPending}
+          error={null}
+          onConfirm={() => rotate.mutate()}
+          onCancel={() => setConfirming(false)}
+        >
+          <p className="text-sm text-muted">O link que o pagador já tem deixa de valer.</p>
+        </ConfirmDialog>
+      )}
 
       {rotate.isError && (
         <div className="space-y-2">

@@ -5,6 +5,7 @@ import { customerKeys } from "../customer/customerApi";
 import type { PaymentMethod } from "../order/types";
 import { ConfirmDialog } from "../support/ConfirmDialog";
 import { messageFor } from "../support/gatewayError";
+import { Button } from "../support/ui/Button";
 import { SavedCardSelect } from "./SavedCardSelect";
 import { patchSubscription, subscriptionKeys } from "./subscriptionApi";
 import type { Subscription, SubscriptionMethodChange } from "./types";
@@ -122,7 +123,12 @@ export function ChangeMethodDialog({ subscription, onClose }: Props) {
       )}
 
       {wantsCard && cards.isError && (
-        <p className="text-sm text-danger">Não foi possível carregar os cartões deste cliente.</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-sm text-danger">Não foi possível carregar os cartões deste cliente.</p>
+          <Button variant="ghost" size="sm" onClick={() => void cards.refetch()}>
+            Tentar de novo
+          </Button>
+        </div>
       )}
     </ConfirmDialog>
   );

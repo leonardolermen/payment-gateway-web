@@ -94,6 +94,11 @@ function NewSubscriptionFields() {
     create.reset();
   }
 
+  function chooseCard(cardId: string | null) {
+    setCardChoice(cardId);
+    setMissing((current) => ({ ...current, card: false }));
+  }
+
   function chooseCustomer(choice: CustomerChoice | null) {
     setCustomerId(choice !== null && "customer_id" in choice ? choice.customer_id : null);
     // Another customer has other cards.
@@ -205,15 +210,20 @@ function NewSubscriptionFields() {
           <SavedCardSelect
             cards={cards.data}
             value={cardChoice}
-            onChange={setCardChoice}
+            onChange={chooseCard}
             error={missing.card ? "Escolha um cartão ou o link" : undefined}
           />
         )}
 
         {wantsCards && cards.isError && (
-          <p role="alert" className="text-sm text-danger">
-            Não foi possível carregar os cartões deste cliente.
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p role="alert" className="text-sm text-danger">
+              Não foi possível carregar os cartões deste cliente.
+            </p>
+            <Button variant="ghost" size="sm" onClick={() => void cards.refetch()}>
+              Tentar de novo
+            </Button>
+          </div>
         )}
 
         <TextField

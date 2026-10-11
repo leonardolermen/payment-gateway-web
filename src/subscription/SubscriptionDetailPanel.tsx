@@ -21,7 +21,7 @@ function pollInterval(status: SubscriptionStatus | undefined): number | false {
 }
 
 // Keyed by id: moving from one subscription to the next must not carry the previous one's open
-// dialog, typed CVV or rotated link along.
+// dialog or rotated link along.
 export function SubscriptionDetailPanel() {
   const { id = "" } = useParams();
   return <SubscriptionDetail key={id} id={id} />;

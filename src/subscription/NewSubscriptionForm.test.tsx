@@ -478,4 +478,42 @@ describe("NewSubscriptionForm", () => {
     expect(plan).toHaveAttribute("aria-invalid", "true");
     expect(plan).toHaveAccessibleDescription("Escolha um plano.");
   });
+
+  it("cardsThatFailedToLoadCanBeAskedAgain", async () => {
+    serveTheBasics();
+    let cardCalls = 0;
+    server.use(
+      http.get(`${API}/customers/:id/cards`, () => {
+        cardCalls += 1;
+        return cardCalls === 1
+          ? HttpResponse.json({ type: "urn:gateway:INTERNAL", status: 500 }, { status: 500 })
+          : HttpResponse.json([aSavedCard()]);
+      }),
+    );
+    renderForm();
+
+    await chooseCustomer();
+    await userEvent.click(screen.getByRole("radio", { name: "Cartão" }));
+    expect(await screen.findByText(/Não foi possível carregar os cartões/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+
+    expect(await screen.findByLabelText("Cartão salvo")).toBeInTheDocument();
+  });
+
+  it("theCardHintGoesAwayOnAPick", async () => {
+    serveTheBasics([aSavedCard()]);
+    servePost(() => created());
+    renderForm();
+
+    await chooseCustomer();
+    await choosePlan();
+    await userEvent.click(screen.getByRole("radio", { name: "Cartão" }));
+    const card = await screen.findByLabelText("Cartão salvo");
+    await submit();
+    expect(await screen.findByText("Escolha um cartão ou o link")).toBeInTheDocument();
+
+    await userEvent.selectOptions(card, "card_00000001");
+
+    expect(screen.queryByText("Escolha um cartão ou o link")).not.toBeInTheDocument();
+  });
 });

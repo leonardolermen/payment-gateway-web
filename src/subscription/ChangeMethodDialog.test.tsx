@@ -143,4 +143,23 @@ describe("ChangeMethodDialog", () => {
     );
     expect(onClose).not.toHaveBeenCalled();
   });
+
+  it("cardsThatFailedToLoadCanBeAskedAgain", async () => {
+    let cardCalls = 0;
+    server.use(
+      http.get(`${API}/customers/cus_00000001/cards`, () => {
+        cardCalls += 1;
+        return cardCalls === 1
+          ? HttpResponse.json({ type: "urn:gateway:INTERNAL", status: 500 }, { status: 500 })
+          : HttpResponse.json([aSavedCard()]);
+      }),
+    );
+    renderDialog();
+
+    await userEvent.click(screen.getByRole("radio", { name: "Cartão" }));
+    expect(await screen.findByText(/Não foi possível carregar os cartões/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Tentar de novo" }));
+
+    expect(await screen.findByLabelText("Cartão salvo")).toBeInTheDocument();
+  });
 });
