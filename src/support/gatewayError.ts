@@ -60,6 +60,7 @@ const MESSAGES: Record<string, string> = {
   CARD_DECLINED: "Cartão recusado. Tente outro cartão ou outro método.",
   CHECKOUT_CANNOT_CANCEL_CARD: "Um pagamento com cartão não pode ser cancelado por aqui.",
   PROVIDER_CREDENTIALS_MISSING: "Este método não está disponível para esta loja.",
+  PROVIDER_CREDENTIALS_INVALID: "Credencial inválida.",
   CUSTOMER_EXISTS: "Já existe um cliente com este documento.",
   CUSTOMER_INVALID: "Dados do cliente inválidos.",
   INVALID_REQUEST: "Requisição inválida.",

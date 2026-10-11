@@ -38,11 +38,13 @@ Painel do merchant e checkout hospedado do payment gateway (React 19, Vite, Tail
 | `/app/customers`     | lista de clientes                                                                                                                                                                                        |
 | `/app/customers/new` | novo cliente                                                                                                                                                                                             |
 | `/app/plans`         | planos: lista com filtro "só ativos", novo plano e edição de nome/ativo                                                                                                                                  |
-| `/app/settings`      | configurações, em abas: Conta (loja e ambiente), Minha conta (nome e senha), Parcelamento (máximo, sem juros até, juros ao mês, prévia do que o pagador vê) e Equipe (convites e papéis, só para o dono) |
+| `/app/settings`      | configurações, em abas: Conta (loja e ambiente), Minha conta (nome e senha), Parcelamento (máximo, sem juros até, juros ao mês, prévia do que o pagador vê), Provedores (só para o dono: credenciais do Itaú para Pix/boleto e da Cielo para cartão, por ambiente, com testar conexão, chave de notificação da Cielo e a URL de webhook para registrar no banco) e Equipe (convites e papéis, só para o dono) |
 | `/pay/:token`        | checkout do pagador: Pix, boleto ou cartão (sem chave, o token vem na URL)                                                                                                                               |
 
 Rotas da API usadas nas listas: `GET /v1/orders?status&limit&cursor` e `GET /v1/customers?limit&cursor`.
 Planos e configurações usam `GET/POST /v1/plans`, `PATCH /v1/plans/{id}` e `GET/PUT /v1/installment-settings`.
+Provedores usa `GET /v1/merchant/providers`, `PUT /v1/merchant/providers/{provider}/credentials`,
+`POST /v1/merchant/providers/{provider}/test` e `PUT /v1/merchant/providers/CIELO/notification-key`.
 O cursor é o id do último item da página anterior (não há `X-Next-Cursor`).
 O token de acesso vai no header `Authorization: Bearer` e o ambiente (teste ou produção) em `X-Environment`, a cada requisição.
 
@@ -67,6 +69,9 @@ O token de acesso vai no header `Authorization: Bearer` e o ambiente (teste ou p
   | Excluir cliente                                                                               | sim  |    não     |   não   |
   | Webhooks, chaves de API, provedores, parcelamento, equipe e loja                              | sim  |    não     |   não   |
 
+- Segredos de provedor (client secret, merchant key, chave privada, chave de notificação) nunca voltam
+  no `GET`: ele só diz `secrets_set`. No `PUT`, segredo omitido mantém o guardado e `""` apaga. O campo
+  é limpo depois de salvar e o valor digitado nunca vai para cache, storage nem URL.
 - Os campos do cartão são zerados antes de qualquer envio e nunca vão para storage, cache nem URL
   (coberto por `src/checkout/cardDataNeverPersists.test.tsx`).
 - `vercel.json` define CSP e `Referrer-Policy: no-referrer` (o token do checkout está na URL).
