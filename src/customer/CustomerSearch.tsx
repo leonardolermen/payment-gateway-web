@@ -1,45 +1,70 @@
 import { useEffect, useState } from "react";
 import { INPUT_CLASSES } from "../support/ui/inputClasses";
-import type { CustomerSearch as Search } from "./customerApi";
+import type { CustomerFilter } from "./customerApi";
 import { onlyDigits } from "./document";
 
 const DEBOUNCE_MS = 300;
+const DOCUMENT_LENGTH = 11;
 const DOCUMENT_SHAPE = /^[\d.\-/\s]+$/;
+const DOCUMENT_RUN = /\d{11,}/;
 
-type Props = { onChange: (search: Search) => void };
+type Props = { onChange: (filter: CustomerFilter) => void };
+type Reading = { filter: CustomerFilter } | { incompleteDocument: true };
 
 // A CPF/CNPJ with or without punctuation is an exact lookup; anything else is a "name contains".
-function searchFor(value: string): Search {
+// A partial document, or a name carrying a document, must never go out as `q`: that would send
+// document digits to a substring search over names.
+function read(value: string): Reading {
   const trimmed = value.trim();
+  const digits = onlyDigits(trimmed);
 
   if (trimmed === "") {
-    return {};
+    return { filter: {} };
   }
 
-  if (onlyDigits(trimmed).length >= 11 && DOCUMENT_SHAPE.test(trimmed)) {
-    return { document: onlyDigits(trimmed) };
+  if (DOCUMENT_SHAPE.test(trimmed)) {
+    return digits.length >= DOCUMENT_LENGTH
+      ? { filter: { document: digits } }
+      : { incompleteDocument: true };
   }
 
-  return { q: trimmed };
+  if (DOCUMENT_RUN.test(trimmed)) {
+    return { incompleteDocument: true };
+  }
+
+  return { filter: { q: trimmed } };
 }
 
 export function CustomerSearch({ onChange }: Props) {
   const [value, setValue] = useState("");
+  const reading = read(value);
 
   // Debounced so a name typed letter by letter reaches the gateway once, not once per keystroke.
   useEffect(() => {
-    const timer = window.setTimeout(() => onChange(searchFor(value)), DEBOUNCE_MS);
+    const debounced = read(value);
+    const timer = window.setTimeout(
+      () => onChange("filter" in debounced ? debounced.filter : {}),
+      DEBOUNCE_MS,
+    );
     return () => window.clearTimeout(timer);
   }, [value, onChange]);
 
   return (
-    <input
-      type="search"
-      aria-label="Buscar por nome ou documento"
-      placeholder="Buscar por nome ou documento…"
-      className={INPUT_CLASSES}
-      value={value}
-      onChange={(event) => setValue(event.target.value)}
-    />
+    <div className="space-y-1">
+      <input
+        type="search"
+        aria-label="Buscar por nome ou documento"
+        aria-describedby={"incompleteDocument" in reading ? "customer-search-hint" : undefined}
+        placeholder="Buscar por nome ou documento…"
+        className={INPUT_CLASSES}
+        value={value}
+        onChange={(event) => setValue(event.target.value)}
+      />
+      {"incompleteDocument" in reading && (
+        <p id="customer-search-hint" className="text-sm text-muted">
+          Digite o documento completo
+        </p>
+      )}
+    </div>
   );
 }

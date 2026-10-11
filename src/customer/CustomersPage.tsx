@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router";
 import { useCan } from "../auth/useCan";
@@ -12,21 +12,23 @@ import {
   CUSTOMER_PAGE_SIZE,
   customerKeys,
   listCustomers,
-  type CustomerSearch,
+  type CustomerFilter,
 } from "./customerApi";
-import { CustomerSearch as CustomerSearchInput } from "./CustomerSearch";
+import { CustomerSearch } from "./CustomerSearch";
 
 const HEADERS = ["Nome", "Documento", "E-mail", "Criado em"];
 
 export function CustomersPage() {
   const mayCreateCustomer = useCan("create_customer");
-  const [search, setSearch] = useState<CustomerSearch>({});
+  const [search, setSearch] = useState<CustomerFilter>({});
 
   const query = useInfiniteQuery({
     queryKey: customerKeys.list(search),
     queryFn: ({ pageParam }) =>
       listCustomers({ ...search, cursor: pageParam, limit: CUSTOMER_PAGE_SIZE }),
     initialPageParam: undefined as string | undefined,
+    // Keeps the last results on screen while the next search loads, so the table does not flash.
+    placeholderData: keepPreviousData,
     // A document lookup answers 0 or 1 customer: there is never a next page.
     getNextPageParam: (last) =>
       search.document || last.length < CUSTOMER_PAGE_SIZE ? undefined : last.at(-1)?.id,
@@ -47,7 +49,7 @@ export function CustomersPage() {
         }
       />
 
-      <CustomerSearchInput onChange={setSearch} />
+      <CustomerSearch onChange={setSearch} />
 
       {query.isError && (
         <p role="alert" className="text-danger">

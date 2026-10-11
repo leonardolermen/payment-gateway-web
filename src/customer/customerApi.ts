@@ -4,16 +4,16 @@ import type { Customer, NewCustomer } from "./types";
 
 export const CUSTOMER_PAGE_SIZE = 20;
 
-export type CustomerSearch = { q?: string; document?: string };
+export type CustomerFilter = { q?: string; document?: string };
 
 export const customerKeys = {
   all: ["customers"] as const,
-  list: (search: CustomerSearch) => ["customers", "list", search] as const,
+  list: (search: CustomerFilter) => ["customers", "list", search] as const,
   detail: (id: string) => ["customers", id] as const,
   cards: (id: string) => ["customers", id, "cards"] as const,
 };
 
-type ListParams = CustomerSearch & { cursor?: string; limit?: number };
+type ListParams = CustomerFilter & { cursor?: string; limit?: number };
 
 // `document` is exact and answers 0 or 1 customer, so it goes alone: no cursor, no limit.
 export async function listCustomers(params: ListParams): Promise<Customer[]> {
@@ -41,7 +41,10 @@ export async function findByDocument(document: string): Promise<Customer | null>
   return customers[0] ?? null;
 }
 
-export async function createCustomer(body: NewCustomer, idempotencyKey: string): Promise<Customer> {
+export async function createCustomer(
+  body: NewCustomer,
+  idempotencyKey: string,
+): Promise<Customer> {
   const { data } = await merchantRequest<Customer>("/v1/customers", {
     method: "POST",
     body,
