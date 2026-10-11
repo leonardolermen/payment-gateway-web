@@ -50,7 +50,8 @@ function changesOf(original: EditableFields, edited: EditableFields): CustomerPa
 
 export function EditCustomerForm({ customer, onClose }: Props) {
   const queryClient = useQueryClient();
-  const original = editableFieldsOf(customer);
+  // Frozen at open: a refetch landing mid-edit must not turn an untouched field into a change.
+  const [original] = useState(() => editableFieldsOf(customer));
   const [fields, setFields] = useState<EditableFields>(original);
 
   const save = useMutation({

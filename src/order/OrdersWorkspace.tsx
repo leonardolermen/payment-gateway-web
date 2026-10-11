@@ -19,7 +19,14 @@ export function OrdersWorkspace() {
 
   useEffect(() => {
     if (searchParams.has("customer_id")) {
-      setSearchParams({}, { replace: true });
+      setSearchParams(
+        (current) => {
+          const next = new URLSearchParams(current);
+          next.delete("customer_id");
+          return next;
+        },
+        { replace: true },
+      );
     }
   }, [searchParams, setSearchParams]);
 

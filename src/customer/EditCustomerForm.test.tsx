@@ -1,4 +1,5 @@
-import { screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
@@ -88,6 +89,28 @@ describe("EditCustomerForm", () => {
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(bodies).toEqual([{ email: "maria@novo.com" }]);
     expect(queryClient.getQueryData(customerKeys.detail("cus_00000001"))).toEqual(saved);
+  });
+
+  // The detail refetches on focus and on an interval elsewhere; a refetch landing mid-edit must not
+  // make an untouched field look changed against the newer customer.
+  it("aRefetchMidEditKeepsTheBaselineItOpenedWith", async () => {
+    setAccessToken("gs_test");
+    const bodies = capturePatch(() => HttpResponse.json(WITH_ADDRESS));
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const onClose = vi.fn();
+    const form = (customer: Customer) => (
+      <QueryClientProvider client={queryClient}>
+        <EditCustomerForm customer={customer} onClose={onClose} />
+      </QueryClientProvider>
+    );
+    const { rerender } = render(form(WITH_ADDRESS));
+
+    await userEvent.type(screen.getByLabelText("Nome"), " Lima");
+    rerender(form({ ...WITH_ADDRESS, email: "outro@example.com" }));
+    await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(bodies).toEqual([{ name: "Maria Souza Lima" }]);
   });
 
   it("anyAddressChangeSendsTheWholeAddress", async () => {

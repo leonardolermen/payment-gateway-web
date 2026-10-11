@@ -131,6 +131,17 @@ describe("OrdersWorkspace", () => {
     expect(bodies[0]).not.toHaveProperty("customer");
   });
 
+  it("dropsOnlyTheCustomerIdAndKeepsTheOtherParams", async () => {
+    server.use(
+      http.get(ORDERS, () => HttpResponse.json([])),
+      http.get(`${CUSTOMERS}/cus_00000001`, () => HttpResponse.json(aCustomer())),
+    );
+    const { router } = renderWorkspace("/app/orders?customer_id=cus_00000001&tab=x", "FINANCE");
+
+    expect(await screen.findByText("Maria Souza")).toBeInTheDocument();
+    await waitFor(() => expect(router.state.location.search).toBe("?tab=x"));
+  });
+
   it("readonlySeesTheListAndNoNewOrderForm", async () => {
     server.use(http.get(ORDERS, () => HttpResponse.json([anOrder()])));
 

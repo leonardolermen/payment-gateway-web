@@ -41,10 +41,13 @@ function renderDetail(role: Role = "OWNER", mocks: Mocks = {}) {
     }),
   );
 
-  return renderWithProviders([{ path: "/app/customers/:id", element: <CustomerDetailPage /> }], {
-    initialEntries: ["/app/customers/cus_00000001"],
-    me: aMe({ role }),
-  });
+  return renderWithProviders(
+    [
+      { path: "/app/customers/:id", element: <CustomerDetailPage /> },
+      { path: "/app/customers", element: <p>Lista de clientes</p> },
+    ],
+    { initialEntries: ["/app/customers/cus_00000001"], me: aMe({ role }) },
+  );
 }
 
 describe("CustomerDetailPage", () => {
@@ -185,5 +188,29 @@ describe("CustomerDetailPage", () => {
     });
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Não encontrado.");
+  });
+
+  it("aDeletedCustomerIsNotFetchedAgain", async () => {
+    let customerGets = 0;
+    renderDetail("OWNER");
+    server.use(
+      http.get(`${API}/customers/cus_00000001`, () => {
+        customerGets += 1;
+        return HttpResponse.json(aCustomer());
+      }),
+      http.delete(`${API}/customers/cus_00000001`, () => new HttpResponse(null, { status: 204 })),
+    );
+
+    await userEvent.click(await screen.findByRole("button", { name: "Excluir cliente" }));
+    await userEvent.type(
+      screen.getByLabelText("Digite o nome do cliente para confirmar"),
+      "Maria Souza",
+    );
+    const getsBeforeDelete = customerGets;
+    await userEvent.click(screen.getByRole("button", { name: "Excluir" }));
+
+    expect(await screen.findByText("Lista de clientes")).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(customerGets).toBe(getsBeforeDelete);
   });
 });
