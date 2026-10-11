@@ -101,8 +101,8 @@ export function messageFor(error: unknown): string {
   return "Algo deu errado.";
 }
 
-// A 409 names what is in the way (the subscription that still charges a card or a customer) in the
-// gateway's own words, which say more than any fixed message the panel could hold.
+// A 409 names what is in the way (the active subscription that keeps a customer) in the gateway's
+// own words, which say more than any fixed message the panel could hold.
 export function conflictMessageFor(error: unknown): string {
   if (error instanceof GatewayRequestError && error.error.status === 409 && error.error.detail) {
     return error.error.detail;

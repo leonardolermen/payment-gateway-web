@@ -8,6 +8,7 @@ import { aSavedCard } from "../test/fixtures/customers";
 import { aMe } from "../test/me";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
+import { cardKeys } from "./cardApi";
 import { SavedCardsCard } from "./SavedCardsCard";
 import type { SavedCard } from "./types";
 
@@ -82,17 +83,14 @@ describe("SavedCardsCard", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("cardInUseShowsTheErrorOnItsRow", async () => {
+  // The gateway answers 204 even for a card a subscription charges; a failure is anything else.
+  it("aFailedRemovalShowsTheErrorOnItsRow", async () => {
     renderCards([aSavedCard(), aSavedCard({ id: "card_00000002", last4: "1111" })]);
     server.use(
       http.delete(CARD_URL, () =>
         HttpResponse.json(
-          {
-            type: "urn:gateway:CARD_IN_USE",
-            status: 409,
-            detail: "Este cartão está em uso por uma assinatura ativa.",
-          },
-          { status: 409 },
+          { type: "urn:gateway:NOT_FOUND", status: 404, detail: "card not found" },
+          { status: 404 },
         ),
       ),
     );
@@ -105,12 +103,38 @@ describe("SavedCardsCard", () => {
       }),
     );
 
-    expect(await within(row).findByRole("alert")).toHaveTextContent(
-      "Este cartão está em uso por uma assinatura ativa.",
-    );
+    expect(await within(row).findByRole("alert")).toHaveTextContent("Não encontrado.");
     expect(screen.getByText("final 4242")).toBeInTheDocument();
-    expect(screen.getByText("final 1111")).toBeInTheDocument();
     expect(within(await rowOf("final 1111")).queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("warnsThatASubscriptionChargingTheCardWillFail", async () => {
+    renderCards([aSavedCard()]);
+
+    const row = await rowOf("final 4242");
+    await userEvent.click(within(row).getByRole("button", { name: "Remover" }));
+
+    expect(screen.getByRole("dialog", { name: "Remover cartão?" })).toHaveTextContent(
+      "Se uma assinatura cobra este cartão, a próxima cobrança vai falhar.",
+    );
+  });
+
+  it("aRemovedCardLeavesItsCachedDetail", async () => {
+    const { queryClient } = renderCards([aSavedCard()]);
+    queryClient.setQueryData(cardKeys.detail("card_00000001"), aSavedCard());
+    server.use(http.delete(CARD_URL, () => new HttpResponse(null, { status: 204 })));
+
+    const row = await rowOf("final 4242");
+    await userEvent.click(within(row).getByRole("button", { name: "Remover" }));
+    await userEvent.click(
+      within(screen.getByRole("dialog", { name: "Remover cartão?" })).getByRole("button", {
+        name: "Remover",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(queryClient.getQueryState(cardKeys.detail("card_00000001"))?.isInvalidated).toBe(true),
+    );
   });
 });

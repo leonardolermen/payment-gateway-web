@@ -6,7 +6,8 @@ export async function listCards(customerId: string): Promise<SavedCard[]> {
   return data;
 }
 
-// 409 while an active subscription still charges this card; the gateway's detail says so.
+// The gateway removes the card even when a subscription charges it (no 409 today): that
+// subscription's next charge fails. The confirmation says so.
 export async function deleteCard(id: string): Promise<void> {
   await merchantRequest(`/v1/cards/${id}`, { method: "DELETE" });
 }

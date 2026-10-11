@@ -2,11 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useCan } from "../auth/useCan";
 import { ConfirmDialog } from "../support/ConfirmDialog";
-import { conflictMessageFor } from "../support/gatewayError";
+import { messageFor } from "../support/gatewayError";
 import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
 import { Table } from "../support/ui/Table";
-import { deleteCard, listCards } from "./cardApi";
+import { cardKeys, deleteCard, listCards } from "./cardApi";
 import { customerKeys } from "./customerApi";
 import type { SavedCard } from "./types";
 
@@ -23,7 +23,12 @@ function SavedCardRow({ card, customerId }: { card: SavedCard; customerId: strin
   // never flashes back with its "Remover" in between. A failure closes it and lands on the row.
   const removal = useMutation({
     mutationFn: () => deleteCard(card.id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: customerKeys.cards(customerId) }),
+    onSuccess: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: customerKeys.cards(customerId) }),
+        // A subscription header may still show this card by its own key.
+        queryClient.invalidateQueries({ queryKey: cardKeys.detail(card.id) }),
+      ]),
     onSettled: () => setConfirming(false),
   });
 
@@ -44,10 +49,9 @@ function SavedCardRow({ card, customerId }: { card: SavedCard; customerId: strin
             Remover
           </Button>
 
-          {/* The 409 says which subscription still charges this card. */}
           {removal.isError && (
             <p role="alert" className="text-sm text-danger">
-              {conflictMessageFor(removal.error)}
+              {messageFor(removal.error)}
             </p>
           )}
 
@@ -61,7 +65,8 @@ function SavedCardRow({ card, customerId }: { card: SavedCard; customerId: strin
               onCancel={() => setConfirming(false)}
             >
               <p className="text-sm text-muted">
-                O cartão {card.brand} final {card.last4} deixa de poder ser cobrado.
+                O cartão {card.brand} final {card.last4} deixa de poder ser cobrado. Se uma
+                assinatura cobra este cartão, a próxima cobrança vai falhar.
               </p>
             </ConfirmDialog>
           )}
