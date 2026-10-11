@@ -10,7 +10,8 @@ import type { CustomerChoice } from "../customer/types";
 import type { PaymentMethod } from "../order/types";
 import { listPlans, planKeys } from "../plan/planApi";
 import { priceLabel } from "../plan/planLabels";
-import { messageFor, provesNothingWasCreated } from "../support/gatewayError";
+import { messageFor } from "../support/gatewayError";
+import { RestartAttempt } from "../support/RestartAttempt";
 import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
 import { Field } from "../support/ui/Field";
@@ -70,11 +71,7 @@ function NewSubscriptionFields() {
     mutationFn: (body: NewSubscription) => createSubscription(body, idempotencyKey.current()),
     // The response may carry the one-time checkout link: the mutation is dropped with the form.
     gcTime: 0,
-    onError: (error) => {
-      if (provesNothingWasCreated(error)) {
-        idempotencyKey.renew();
-      }
-    },
+    onError: (error) => idempotencyKey.renewIfNothingWasCreated(error),
     onSuccess: (subscription) => {
       idempotencyKey.renew();
 
@@ -90,6 +87,12 @@ function NewSubscriptionFields() {
       navigate(`/app/subscriptions/${subscription.id}`);
     },
   });
+
+  // The operator checked the list and found nothing: the same form goes out as a new request.
+  function restart() {
+    idempotencyKey.renew();
+    create.reset();
+  }
 
   function chooseCustomer(choice: CustomerChoice | null) {
     setCustomerId(choice !== null && "customer_id" in choice ? choice.customer_id : null);
@@ -221,9 +224,12 @@ function NewSubscriptionFields() {
         />
 
         {create.isError && (
-          <p role="alert" className="text-sm text-danger">
-            {messageFor(create.error)}
-          </p>
+          <div className="space-y-2">
+            <p role="alert" className="text-sm text-danger">
+              {messageFor(create.error)}
+            </p>
+            <RestartAttempt error={create.error} onRestart={restart} />
+          </div>
         )}
 
         <Button type="submit" size="lg" disabled={create.isPending || cardsUnavailable}>

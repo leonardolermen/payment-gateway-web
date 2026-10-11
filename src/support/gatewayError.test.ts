@@ -50,7 +50,11 @@ describe("messageFor", () => {
       "IDEMPOTENCY_KEY_REUSED",
       "A tentativa anterior pode ter sido registrada. Confira antes de tentar de novo.",
     ],
-    [409, "IN_PROGRESS", "Ainda processando a tentativa anterior. Aguarde alguns segundos."],
+    [
+      409,
+      "IN_PROGRESS",
+      "A tentativa anterior não terminou. Confira se ela foi registrada; se não, recomece.",
+    ],
   ])("translates the idempotency answer %i %s", (status, code, message) => {
     const error = new GatewayRequestError({ status, code, detail: "x", extras: {} });
     expect(messageFor(error)).toBe(message);

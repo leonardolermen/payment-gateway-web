@@ -10,6 +10,7 @@ import { aPlan } from "../test/fixtures/plans";
 import { aSubscription } from "../test/fixtures/subscriptions";
 import { aMe } from "../test/me";
 import { server } from "../test/msw/server";
+import { serverError, withTheGatewayKeyRule } from "../test/idempotency";
 import { renderWithProviders } from "../test/render";
 import { NewSubscriptionForm } from "./NewSubscriptionForm";
 import { subscriptionKeys } from "./subscriptionApi";
@@ -40,15 +41,13 @@ function serveTheBasics(cards: SavedCard[] = []) {
   return planSearches;
 }
 
-function servePost(answer: () => Response) {
+function servePost(answer: (key: string | null) => Response) {
   const sent: Sent[] = [];
   server.use(
     http.post(SUBSCRIPTIONS, async ({ request }) => {
-      sent.push({
-        body: (await request.json()) as Record<string, unknown>,
-        key: request.headers.get("Idempotency-Key"),
-      });
-      return answer();
+      const key = request.headers.get("Idempotency-Key");
+      sent.push({ body: (await request.json()) as Record<string, unknown>, key });
+      return answer(key);
     }),
   );
   return sent;
@@ -254,31 +253,37 @@ describe("NewSubscriptionForm", () => {
     expect(screen.queryByText(LINK)).not.toBeInTheDocument();
   });
 
-  it("keepsTheIdempotencyKeyAcrossARetryAndRenewsItAfterSuccess", async () => {
+  // After a 5xx the gateway holds the key: a retry gets 409 IN_PROGRESS, never a second create.
+  // Only the operator, having checked the list, starts over under a new key.
+  it("aRetryAfterA5xxIsHeldUntilTheOperatorStartsOver", async () => {
     serveTheBasics();
-    let answers = 0;
-    const sent = servePost(() => {
-      answers += 1;
-      return answers === 1
-        ? HttpResponse.json({ type: "urn:gateway:INTERNAL" }, { status: 500 })
-        : created();
-    });
+    const sent = servePost(withTheGatewayKeyRule((run) => (run === 1 ? serverError() : created())));
     const { router } = renderForm();
 
     await fillPix();
     await submit();
     await screen.findByRole("alert");
+    expect(screen.queryByRole("button", { name: "Recomeçar" })).not.toBeInTheDocument();
     await submit();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "A tentativa anterior não terminou. Confira se ela foi registrada; se não, recomece.",
+    );
+    expect(sent[1]?.key).toBe(sent[0]?.key);
+
+    await userEvent.click(screen.getByRole("button", { name: "Recomeçar" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await submit();
+
     await waitFor(() => expect(router.state.location.pathname).toBe("/app/subscriptions/sub_new"));
+    expect(sent).toHaveLength(3);
+    expect(sent[2]?.key).not.toBe(sent[0]?.key);
 
     await router.navigate("/app/subscriptions/new");
     await fillPix();
     await submit();
-    await waitFor(() => expect(sent).toHaveLength(3));
-
-    expect(sent[0]?.key).toBeTruthy();
-    expect(sent[1]?.key).toBe(sent[0]?.key);
-    expect(sent[2]?.key).not.toBe(sent[0]?.key);
+    await waitFor(() => expect(sent).toHaveLength(4));
+    expect(sent[3]?.key).not.toBe(sent[2]?.key);
   });
 
   it("keepsTheIdempotencyKeyAcrossARetryAfterANetworkError", async () => {
@@ -332,13 +337,7 @@ describe("NewSubscriptionForm", () => {
   // intent and must replay under the same key.
   it("keepsTheKeyAfterA5xxEvenWhenTheFormChanges", async () => {
     serveTheBasics();
-    let answers = 0;
-    const sent = servePost(() => {
-      answers += 1;
-      return answers === 1
-        ? HttpResponse.json({ type: "urn:gateway:INTERNAL" }, { status: 500 })
-        : created();
-    });
+    const sent = servePost(withTheGatewayKeyRule(() => serverError()));
     renderForm();
 
     await fillPix();
@@ -350,6 +349,7 @@ describe("NewSubscriptionForm", () => {
     await waitFor(() => expect(sent).toHaveLength(2));
     expect(sent[1]?.body).toHaveProperty("start_at", "2026-11-01");
     expect(sent[1]?.key).toBe(sent[0]?.key);
+    expect(await screen.findByRole("button", { name: "Recomeçar" })).toBeInTheDocument();
   });
 
   // A 422 is a clear "nothing was created": the corrected form is a new request.
@@ -398,6 +398,11 @@ describe("NewSubscriptionForm", () => {
     await submit();
     await waitFor(() => expect(sent).toHaveLength(2));
     expect(sent[1]?.key).toBe(sent[0]?.key);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Recomeçar" }));
+    await submit();
+    await waitFor(() => expect(sent).toHaveLength(3));
+    expect(sent[2]?.key).not.toBe(sent[0]?.key);
   });
 
   it("aNewSearchDropsTheCustomerChosenBefore", async () => {

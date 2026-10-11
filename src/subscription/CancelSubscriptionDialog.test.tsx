@@ -8,6 +8,7 @@ import { anOrder } from "../test/fixtures/orders";
 import { aSubscription } from "../test/fixtures/subscriptions";
 import { aMe } from "../test/me";
 import { server } from "../test/msw/server";
+import { serverError, withTheGatewayKeyRule } from "../test/idempotency";
 import { renderWithProviders } from "../test/render";
 import { CancelSubscriptionDialog } from "./CancelSubscriptionDialog";
 import { subscriptionKeys } from "./subscriptionApi";
@@ -16,12 +17,13 @@ const CANCEL = "http://localhost:8080/v1/subscriptions/sub_00000001/cancel";
 
 type Sent = { body: unknown; key: string | null };
 
-function serveCancel(answer: () => Response) {
+function serveCancel(answer: (key: string | null) => Response) {
   const sent: Sent[] = [];
   server.use(
     http.post(CANCEL, async ({ request }) => {
-      sent.push({ body: await request.json(), key: request.headers.get("Idempotency-Key") });
-      return answer();
+      const key = request.headers.get("Idempotency-Key");
+      sent.push({ body: await request.json(), key });
+      return answer(key);
     }),
   );
   return sent;
@@ -100,21 +102,31 @@ describe("CancelSubscriptionDialog", () => {
     expect(queryClient.getQueryState(orderKeys.detail("ord_invoice"))?.isInvalidated).toBe(true);
   });
 
-  it("keepsTheKeyAfterAnUncertainFailure", async () => {
-    let calls = 0;
-    const sent = serveCancel(() => {
-      calls += 1;
-      return calls === 1
-        ? HttpResponse.json({ type: "urn:gateway:INTERNAL", status: 500 }, { status: 500 })
-        : HttpResponse.json(aSubscription({ cancel_at_period_end: true }));
-    });
-    renderDialog();
+  it("keepsTheKeyAfterAnUncertainFailureUntilTheOperatorStartsOver", async () => {
+    const sent = serveCancel(
+      withTheGatewayKeyRule((run) =>
+        run === 1
+          ? serverError()
+          : HttpResponse.json(aSubscription({ cancel_at_period_end: true })),
+      ),
+    );
+    const { onClose } = renderDialog();
 
     await userEvent.click(screen.getByRole("button", { name: "Cancelar assinatura" }));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Cancelar assinatura" }));
 
-    await waitFor(() => expect(sent).toHaveLength(2));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "A tentativa anterior não terminou.",
+    );
     expect(sent[1]?.key).toBe(sent[0]?.key);
+
+    await userEvent.click(screen.getByRole("button", { name: "Recomeçar" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Cancelar assinatura" }));
+
+    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    expect(sent).toHaveLength(3);
+    expect(sent[2]?.key).not.toBe(sent[0]?.key);
   });
 });

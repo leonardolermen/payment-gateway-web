@@ -71,7 +71,8 @@ const MESSAGES: Record<string, string> = {
   SUBSCRIPTION_NOT_ACTIVE: "Esta assinatura não está ativa.",
   IDEMPOTENCY_KEY_REUSED:
     "A tentativa anterior pode ter sido registrada. Confira antes de tentar de novo.",
-  IN_PROGRESS: "Ainda processando a tentativa anterior. Aguarde alguns segundos.",
+  IN_PROGRESS:
+    "A tentativa anterior não terminou. Confira se ela foi registrada; se não, recomece.",
   INVALID_REQUEST: "Requisição inválida.",
   RATE_LIMITED: "Muitas tentativas. Aguarde um instante.",
   EMAIL_TAKEN: "Este e-mail já tem conta.",
@@ -109,6 +110,16 @@ export function conflictMessageFor(error: unknown): string {
   }
 
   return messageFor(error);
+}
+
+// The gateway will not run a request under this key again: it is held after a 5xx (IN_PROGRESS,
+// until a purge hours later) or bound to another body (REUSED). Only a new key goes through.
+export function keyIsHeld(error: unknown): boolean {
+  if (!(error instanceof GatewayRequestError)) {
+    return false;
+  }
+
+  return error.error.code === "IN_PROGRESS" || error.error.code === "IDEMPOTENCY_KEY_REUSED";
 }
 
 // A 400 or 422 is the gateway refusing the request before it created anything, so the corrected

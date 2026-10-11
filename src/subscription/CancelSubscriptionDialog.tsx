@@ -2,7 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { orderKeys } from "../order/orderApi";
 import { ConfirmDialog } from "../support/ConfirmDialog";
-import { messageFor, provesNothingWasCreated } from "../support/gatewayError";
+import { messageFor } from "../support/gatewayError";
+import { RestartAttempt } from "../support/RestartAttempt";
 import { useIdempotencyKey } from "../support/useIdempotencyKey";
 import { cancelSubscription, subscriptionKeys } from "./subscriptionApi";
 import { cancelsOnlyNow } from "./subscriptionRules";
@@ -52,11 +53,7 @@ export function CancelSubscriptionDialog({ subscription, onClose }: Props) {
   const cancel = useMutation({
     mutationFn: () =>
       cancelSubscription(subscription.id, { at_period_end: atPeriodEnd }, idempotencyKey.current()),
-    onError: (error) => {
-      if (provesNothingWasCreated(error)) {
-        idempotencyKey.renew();
-      }
-    },
+    onError: (error) => idempotencyKey.renewIfNothingWasCreated(error),
     onSuccess: async () => {
       idempotencyKey.renew();
       // Canceling now cancels the open invoice too: the orders list must not keep it open.
@@ -103,6 +100,14 @@ export function CancelSubscriptionDialog({ subscription, onClose }: Props) {
           );
         })}
       </fieldset>
+
+      <RestartAttempt
+        error={cancel.error}
+        onRestart={() => {
+          idempotencyKey.renew();
+          cancel.reset();
+        }}
+      />
     </ConfirmDialog>
   );
 }
