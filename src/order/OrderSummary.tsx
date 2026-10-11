@@ -5,7 +5,7 @@ import { payerLabel } from "./payerLabel";
 import { StatusBadge } from "./StatusBadge";
 import type { Order } from "./types";
 
-function Entry({ label, children }: { label: string; children: ReactNode }) {
+export function Entry({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-dashed border-line py-1.5">
       <dt className="text-muted">{label}</dt>

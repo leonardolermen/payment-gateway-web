@@ -38,12 +38,19 @@ Painel do merchant e checkout hospedado do payment gateway (React 19, Vite, Tail
 | `/app/customers`     | lista de clientes                                                                                                                                                                                        |
 | `/app/customers/new` | novo cliente                                                                                                                                                                                             |
 | `/app/customers/:id` | um cliente: dados, cartões salvos, histórico de cobranças e assinaturas, editar, excluir e nova cobrança                                                                                                 |
+| `/app/subscriptions` | lista de assinaturas (filtro por status, paginação) à esquerda; à direita, a assinatura escolhida |
+| `/app/subscriptions/:id` | a mesma tela com a assinatura aberta: status, plano, cliente, método e cartão, período, faturas (copiar link e cobrar de novo na fatura em aberto), recobrança, trocar método e cancelar |
+| `/app/subscriptions/new` | a mesma tela com o formulário de nova assinatura à direita: Pix, boleto, cartão salvo ou cartão pelo link |
 | `/app/plans`         | planos: lista com filtro "só ativos", novo plano e edição de nome/ativo                                                                                                                                  |
 | `/app/settings`      | configurações, em abas: Conta (loja e ambiente), Minha conta (nome e senha), Parcelamento (máximo, sem juros até, juros ao mês, prévia do que o pagador vê), Provedores (só para o dono: credenciais do Itaú para Pix/boleto e da Cielo para cartão, por ambiente, com testar conexão, chave de notificação da Cielo e a URL de webhook para registrar no banco) e Equipe (convites e papéis, só para o dono) |
 | `/pay/:token`        | checkout do pagador: Pix, boleto ou cartão (sem chave, o token vem na URL)                                                                                                                               |
 
 Rotas da API usadas nas listas: `GET /v1/orders?status&limit&cursor` e `GET /v1/customers?limit&cursor`.
 Planos e configurações usam `GET/POST /v1/plans`, `PATCH /v1/plans/{id}` e `GET/PUT /v1/installment-settings`.
+Assinaturas usam `GET /v1/subscriptions?status&limit&cursor`, `GET /v1/subscriptions/{id}`,
+`GET /v1/subscriptions/{id}/orders`, `POST /v1/subscriptions`, `POST /v1/subscriptions/{id}/cancel`,
+`PATCH /v1/subscriptions/{id}` e `GET /v1/cards/{id}`; a fatura em aberto usa
+`POST /v1/orders/{id}/checkout-token/rotate` e `POST /v1/orders/{id}/payments`.
 Provedores usa `GET /v1/merchant/providers`, `PUT /v1/merchant/providers/{provider}/credentials`,
 `POST /v1/merchant/providers/{provider}/test` e `PUT /v1/merchant/providers/CIELO/notification-key`.
 O cursor é o id do último item da página anterior (não há `X-Next-Cursor`).
@@ -67,6 +74,7 @@ O token de acesso vai no header `Authorization: Bearer` e o ambiente (teste ou p
   | Ver cobranças, clientes, planos e configurações                                               | sim  |    sim     |   sim   |
   | Criar, cancelar e reembolsar cobranças; criar cliente; criar e editar plano; criar assinatura | sim  |    sim     |   não   |
   | Gerar novo link de pagamento (invalida o link que o pagador já tem)                           | sim  |    sim     |   não   |
+  | Cancelar assinatura; trocar método de pagamento da assinatura                                 | sim  |    sim     |   não   |
   | Excluir cliente                                                                               | sim  |    não     |   não   |
   | Editar cliente; remover cartão salvo                                                          | sim  |    não     |   não   |
   | Webhooks, chaves de API, provedores, parcelamento, equipe e loja                              | sim  |    não     |   não   |

@@ -3,11 +3,14 @@ import type { Order, PaymentMethod } from "../order/types";
 export type SubscriptionStatus =
   "ACTIVE" | "PAST_DUE" | "INCOMPLETE" | "INCOMPLETE_EXPIRED" | "CANCELED" | "ENDED";
 
+// ISSUED: a Pix or boleto went out and waits for the payer; the attempt ends there.
+export type DunningOutcome = "PAID" | "DECLINED" | "ISSUED" | "EXPIRED" | "SKIPPED";
+
 export type DunningAttempt = {
   attempt: number;
   scheduled_at: string;
   ran_at: string | null;
-  outcome: string | null;
+  outcome: DunningOutcome | null;
 };
 
 // Field names mirror the API (snake_case) on purpose, as in order/types.ts.
@@ -37,3 +40,7 @@ export type NewSubscription = {
   card_id?: string;
   start_at?: string;
 };
+
+// card_id goes only with CARD: the gateway charges that saved card from the next invoice on.
+export type SubscriptionMethodChange =
+  { method: "PIX" | "BOLECODE" } | { method: "CARD"; card_id: string };

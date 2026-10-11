@@ -43,3 +43,12 @@ describe("customer actions", () => {
     expect(can("OWNER", "delete_card")).toBe(true);
   });
 });
+
+describe("subscription actions", () => {
+  it("financeCancelsAndChangesTheMethodReadonlyDoesNot", () => {
+    expect(can("FINANCE", "cancel_subscription")).toBe(true);
+    expect(can("FINANCE", "change_subscription_method")).toBe(true);
+    expect(can("READONLY", "cancel_subscription")).toBe(false);
+    expect(can("READONLY", "change_subscription_method")).toBe(false);
+  });
+});

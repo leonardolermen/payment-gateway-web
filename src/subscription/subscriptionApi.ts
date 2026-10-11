@@ -1,6 +1,11 @@
 import type { Order } from "../order/types";
 import { merchantRequest } from "../support/merchantRequest";
-import type { NewSubscription, Subscription, SubscriptionStatus } from "./types";
+import type {
+  NewSubscription,
+  Subscription,
+  SubscriptionMethodChange,
+  SubscriptionStatus,
+} from "./types";
 
 export const SUBSCRIPTION_PAGE_SIZE = 20;
 
@@ -58,6 +63,32 @@ export async function createSubscription(
     method: "POST",
     body,
     idempotencyKey,
+  });
+  return data;
+}
+
+// at_period_end false ends it now; true lets the paid period run out first.
+export async function cancelSubscription(
+  id: string,
+  body: { at_period_end: boolean },
+  idempotencyKey: string,
+): Promise<Subscription> {
+  const { data } = await merchantRequest<Subscription>(`/v1/subscriptions/${id}/cancel`, {
+    method: "POST",
+    body,
+    idempotencyKey,
+  });
+  return data;
+}
+
+// From the next invoice on: the open one keeps the method it was issued with.
+export async function patchSubscription(
+  id: string,
+  body: SubscriptionMethodChange,
+): Promise<Subscription> {
+  const { data } = await merchantRequest<Subscription>(`/v1/subscriptions/${id}`, {
+    method: "PATCH",
+    body,
   });
   return data;
 }

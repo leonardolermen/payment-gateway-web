@@ -16,6 +16,7 @@ import { PlansPage } from "../plan/PlansPage";
 import { SettingsPage } from "../settings/SettingsPage";
 import { NewSubscriptionForm } from "../subscription/NewSubscriptionForm";
 import { NoSubscriptionSelected } from "../subscription/NoSubscriptionSelected";
+import { SubscriptionDetailPanel } from "../subscription/SubscriptionDetailPanel";
 import { SubscriptionsWorkspace } from "../subscription/SubscriptionsWorkspace";
 import { AppLayout } from "./AppLayout";
 
@@ -56,8 +57,7 @@ export const router = createBrowserRouter([
               { index: true, element: <NoSubscriptionSelected /> },
               // Before ":id", so "new" is never read as a subscription id.
               { path: "new", element: <NewSubscriptionForm /> },
-              // No detail panel yet: a row's link lands on the hint instead of a 404.
-              { path: ":id", element: <NoSubscriptionSelected /> },
+              { path: ":id", element: <SubscriptionDetailPanel /> },
             ],
           },
           { path: "plans", element: <PlansPage /> },

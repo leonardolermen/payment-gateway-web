@@ -99,3 +99,19 @@ export async function refundPayment(
     idempotencyKey,
   });
 }
+
+// A saved card charged from the panel still needs its security code: the gateway requires cvv with
+// card_id on an order attempt (only the billing job's own recurring charge goes without one).
+// installments omitted is 1x.
+export async function chargeSavedCard(
+  orderId: string,
+  card: { card_id: string; cvv: string },
+  idempotencyKey: string,
+): Promise<Payment> {
+  const { data } = await merchantRequest<Payment>(`/v1/orders/${orderId}/payments`, {
+    method: "POST",
+    body: { method: "CARD", ...card },
+    idempotencyKey,
+  });
+  return data;
+}

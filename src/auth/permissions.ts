@@ -13,6 +13,8 @@ export type Action =
   | "create_plan"
   | "edit_plan"
   | "create_subscription"
+  | "cancel_subscription"
+  | "change_subscription_method"
   | "webhooks"
   | "api_keys"
   | "providers"
@@ -36,6 +38,8 @@ const MINIMUM: Record<Action, Role> = {
   create_plan: "FINANCE",
   edit_plan: "FINANCE",
   create_subscription: "FINANCE",
+  cancel_subscription: "FINANCE",
+  change_subscription_method: "FINANCE",
   webhooks: "OWNER",
   api_keys: "OWNER",
   providers: "OWNER",

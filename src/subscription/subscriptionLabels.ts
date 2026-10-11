@@ -1,5 +1,5 @@
 import type { BadgeTone } from "../support/ui/Badge";
-import type { SubscriptionStatus } from "./types";
+import type { DunningOutcome, SubscriptionStatus } from "./types";
 
 export const SUBSCRIPTION_STATUS: Record<SubscriptionStatus, { label: string; tone: BadgeTone }> = {
   ACTIVE: { label: "Ativa", tone: "ok" },
@@ -8,4 +8,12 @@ export const SUBSCRIPTION_STATUS: Record<SubscriptionStatus, { label: string; to
   INCOMPLETE_EXPIRED: { label: "Expirada", tone: "neutral" },
   CANCELED: { label: "Cancelada", tone: "neutral" },
   ENDED: { label: "Encerrada", tone: "neutral" },
+};
+
+export const DUNNING_OUTCOME: Record<DunningOutcome, string> = {
+  PAID: "Paga",
+  DECLINED: "Recusada",
+  ISSUED: "Emitida",
+  EXPIRED: "Expirada",
+  SKIPPED: "Dispensada",
 };

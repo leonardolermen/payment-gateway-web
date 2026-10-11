@@ -68,6 +68,7 @@ const MESSAGES: Record<string, string> = {
   CARD_REQUIRED: "Escolha um cartão ou envie o link para o pagador.",
   CARD_NOT_OWNED_BY_CUSTOMER: "Este cartão não é deste cliente.",
   CUSTOMER_ADDRESS_REQUIRED: "Boleto precisa do endereço do cliente.",
+  SUBSCRIPTION_NOT_ACTIVE: "Esta assinatura não está ativa.",
   IDEMPOTENCY_KEY_REUSED:
     "A tentativa anterior pode ter criado a assinatura. Confira a lista antes de tentar de novo.",
   INVALID_REQUEST: "Requisição inválida.",
