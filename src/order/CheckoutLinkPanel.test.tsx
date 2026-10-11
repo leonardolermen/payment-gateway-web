@@ -7,6 +7,7 @@ import type { Role } from "../auth/types";
 import { anOrder } from "../test/fixtures/orders";
 import { aMe } from "../test/me";
 import { server } from "../test/msw/server";
+import { serverError, withTheGatewayKeyRule } from "../test/idempotency";
 import { renderWithProviders } from "../test/render";
 import { CheckoutLinkPanel } from "./CheckoutLinkPanel";
 import type { Order } from "./types";
@@ -140,6 +141,38 @@ describe("CheckoutLinkPanel idempotency keys", () => {
 
     await screen.findByText("https://pay.example/c/2");
     expect(keys[1]).not.toBe(keys[0]);
+  });
+});
+
+describe("CheckoutLinkPanel held key", () => {
+  it("aHeldKeyOffersToStartOver", async () => {
+    const keys: (string | null)[] = [];
+    const answer = withTheGatewayKeyRule((run) =>
+      run === 1
+        ? serverError()
+        : HttpResponse.json(anOrder({ checkout_url: "https://pay.example/c/new" })),
+    );
+    server.use(
+      http.post(
+        "http://localhost:8080/v1/orders/ord_00000001/checkout-token/rotate",
+        ({ request }) => {
+          const key = request.headers.get("Idempotency-Key");
+          keys.push(key);
+          return answer(key);
+        },
+      ),
+    );
+    renderPanel(anOrder(), null);
+
+    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+    await screen.findByRole("alert");
+    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Recomeçar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Gerar novo link" }));
+
+    await screen.findByText("https://pay.example/c/new");
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
   });
 });
 

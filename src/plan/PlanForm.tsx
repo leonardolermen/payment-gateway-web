@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { TextField } from "../customer/TextField";
 import { MoneyInput } from "../order/MoneyInput";
 import { messageFor } from "../support/gatewayError";
+import { RestartAttempt } from "../support/RestartAttempt";
 import { useIdempotencyKey } from "../support/useIdempotencyKey";
 import { Button } from "../support/ui/Button";
 import { Field } from "../support/ui/Field";
@@ -36,12 +37,19 @@ export function PlanForm({ onCreated, onCancel }: Props) {
   const create = useMutation({
     mutationFn: (body: Parameters<typeof createPlan>[0]) =>
       createPlan(body, idempotencyKey.current()),
+    onError: (error) => idempotencyKey.renewIfNothingWasCreated(error),
     onSuccess: (plan) => {
       void queryClient.invalidateQueries({ queryKey: planKeys.all });
       idempotencyKey.renew();
       onCreated(plan);
     },
   });
+
+  // The operator checked and found nothing created: the same form goes out under a new key.
+  function restart() {
+    idempotencyKey.renew();
+    create.reset();
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -136,9 +144,12 @@ export function PlanForm({ onCreated, onCancel }: Props) {
           Valor e intervalo não mudam depois: para outro preço, crie outro plano.
         </p>
         {create.isError && (
-          <p role="alert" className="text-sm text-danger">
-            {messageFor(create.error)}
-          </p>
+          <div className="space-y-2">
+            <p role="alert" className="text-sm text-danger">
+              {messageFor(create.error)}
+            </p>
+            <RestartAttempt error={create.error} onRestart={restart} />
+          </div>
         )}
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={onCancel}>

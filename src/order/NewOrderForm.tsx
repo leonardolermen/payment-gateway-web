@@ -1,5 +1,5 @@
 import { skipToken, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router";
 import { customerKeys, getCustomer } from "../customer/customerApi";
 import { CustomerPicker } from "../customer/CustomerPicker";
@@ -7,8 +7,10 @@ import type { CustomerChoice } from "../customer/types";
 import { TextField } from "../customer/TextField";
 import { saoPauloLocalToIso } from "../support/dates";
 import { messageFor } from "../support/gatewayError";
+import { RestartAttempt } from "../support/RestartAttempt";
 import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
+import { useIdempotencyKey } from "../support/useIdempotencyKey";
 import { MoneyInput } from "./MoneyInput";
 import { createOrder, orderKeys } from "./orderApi";
 
@@ -20,9 +22,9 @@ export function NewOrderForm({ onCreated, preselectedCustomerId = null }: Props)
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Minted once per mounted form: a double click or a retry after a timeout replays the same
+  // One key until a clear answer: a double click or a retry after a timeout replays the same
   // order instead of creating a second one.
-  const idempotencyKey = useRef(crypto.randomUUID());
+  const idempotencyKey = useIdempotencyKey();
 
   const [amount, setAmount] = useState<number | null>(null);
   const [description, setDescription] = useState("");
@@ -50,14 +52,22 @@ export function NewOrderForm({ onCreated, preselectedCustomerId = null }: Props)
 
   const create = useMutation({
     mutationFn: (body: Parameters<typeof createOrder>[0]) =>
-      createOrder(body, idempotencyKey.current),
+      createOrder(body, idempotencyKey.current()),
+    onError: (error) => idempotencyKey.renewIfNothingWasCreated(error),
     onSuccess: (order) => {
+      idempotencyKey.renew();
       void queryClient.invalidateQueries({ queryKey: orderKeys.all });
       // Task 5 reads the state: the link is shown once, right after creation.
       navigate(`/app/orders/${order.id}`, { state: { checkoutUrl: order.checkout_url } });
       onCreated?.();
     },
   });
+
+  // The operator checked and found nothing created: the same form goes out under a new key.
+  function restart() {
+    idempotencyKey.renew();
+    create.reset();
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -125,9 +135,12 @@ export function NewOrderForm({ onCreated, preselectedCustomerId = null }: Props)
         </details>
 
         {create.isError && (
-          <p role="alert" className="text-sm text-danger">
-            {messageFor(create.error)}
-          </p>
+          <div className="space-y-2">
+            <p role="alert" className="text-sm text-danger">
+              {messageFor(create.error)}
+            </p>
+            <RestartAttempt error={create.error} onRestart={restart} />
+          </div>
         )}
 
         <Button type="submit" size="lg" disabled={create.isPending}>

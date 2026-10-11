@@ -1,12 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { Navigate, useNavigate } from "react-router";
 import { can } from "../auth/permissions";
 import { useMe } from "../auth/useMe";
 import { GatewayRequestError, messageFor } from "../support/gatewayError";
+import { RestartAttempt } from "../support/RestartAttempt";
 import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
 import { PageHeader } from "../support/ui/PageHeader";
+import { useIdempotencyKey } from "../support/useIdempotencyKey";
 import { AddressFieldset } from "./AddressFieldset";
 import { createCustomer, customerKeys } from "./customerApi";
 import { fieldBinder, invalidFieldOf, type CustomerFields } from "./customerForm";
@@ -56,12 +58,14 @@ export function NewCustomerPage() {
 function NewCustomerForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const idempotencyKey = useRef(crypto.randomUUID());
+  const idempotencyKey = useIdempotencyKey();
   const [fields, setFields] = useState<CustomerFields>(EMPTY);
 
   const create = useMutation({
-    mutationFn: (body: NewCustomer) => createCustomer(body, idempotencyKey.current),
+    mutationFn: (body: NewCustomer) => createCustomer(body, idempotencyKey.current()),
+    onError: (error) => idempotencyKey.renewIfNothingWasCreated(error),
     onSuccess: () => {
+      idempotencyKey.renew();
       void queryClient.invalidateQueries({ queryKey: customerKeys.all });
       navigate("/app/customers");
     },
@@ -71,6 +75,12 @@ function NewCustomerForm() {
   const duplicateId = failure?.code === "CUSTOMER_EXISTS" ? failure.extras.customer_id : undefined;
   const invalidField = invalidFieldOf(create.error);
   const bind = fieldBinder(fields, setFields, create.error);
+
+  // The operator checked and found nothing created: the same form goes out under a new key.
+  function restart() {
+    idempotencyKey.renew();
+    create.reset();
+  }
 
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -90,10 +100,13 @@ function NewCustomerForm() {
           <AddressFieldset legend="Endereço (opcional)" bind={bind} />
 
           {create.isError && !invalidField && (
-            <p role="alert" className="text-sm text-danger">
-              {messageFor(create.error)}{" "}
-              {typeof duplicateId === "string" && <code>{duplicateId}</code>}
-            </p>
+            <div className="space-y-2">
+              <p role="alert" className="text-sm text-danger">
+                {messageFor(create.error)}{" "}
+                {typeof duplicateId === "string" && <code>{duplicateId}</code>}
+              </p>
+              <RestartAttempt error={create.error} onRestart={restart} />
+            </div>
           )}
 
           <Button type="submit" disabled={create.isPending}>

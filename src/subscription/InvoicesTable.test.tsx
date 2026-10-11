@@ -9,6 +9,7 @@ import { anOrder } from "../test/fixtures/orders";
 import { aSubscription } from "../test/fixtures/subscriptions";
 import { aMe } from "../test/me";
 import { server } from "../test/msw/server";
+import { serverError, withTheGatewayKeyRule } from "../test/idempotency";
 import { renderWithProviders } from "../test/render";
 import { InvoicesTable } from "./InvoicesTable";
 
@@ -201,5 +202,30 @@ describe("InvoicesTable", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Esta cobrança já foi encerrada.");
     expect(screen.queryByText(/Link novo copiado/)).not.toBeInTheDocument();
+  });
+
+  it("aHeldKeyOffersToStartOver", async () => {
+    const user = userEvent.setup();
+    stubClipboard();
+    const answer = withTheGatewayKeyRule((run) => (run === 1 ? serverError() : rotated(FRESH)));
+    const keys: (string | null)[] = [];
+    server.use(
+      http.post(ROTATE, ({ request }) => {
+        const key = request.headers.get("Idempotency-Key");
+        keys.push(key);
+        return answer(key);
+      }),
+    );
+    renderTable([anInvoice({ status: "OPEN" })]);
+
+    await generateLink(user);
+    await screen.findByRole("alert");
+    await generateLink(user);
+    await user.click(await screen.findByRole("button", { name: "Recomeçar" }));
+    await generateLink(user);
+
+    expect(await screen.findByText(/Link novo copiado/)).toBeInTheDocument();
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
   });
 });

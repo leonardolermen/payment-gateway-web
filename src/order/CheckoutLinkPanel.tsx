@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import { useCan } from "../auth/useCan";
 import { copyToClipboard } from "../support/copyToClipboard";
 import { messageFor } from "../support/gatewayError";
+import { RestartAttempt } from "../support/RestartAttempt";
 import { Button } from "../support/ui/Button";
 import { useIdempotencyKey } from "../support/useIdempotencyKey";
 import { invalidateOrder, rotateCheckoutToken } from "./orderApi";
@@ -23,6 +24,7 @@ export function CheckoutLinkPanel({ order, initialUrl, children }: Props) {
   // A second rotate under a fresh key would kill the link just issued; a retry reuses the key.
   const rotate = useMutation({
     mutationFn: () => rotateCheckoutToken(order.id, rotateKey.current()),
+    onError: (error) => rotateKey.renewIfNothingWasCreated(error),
     // The rotated link is shown once: the mutation that holds it goes away with the panel.
     gcTime: 0,
     onSuccess: async (rotated) => {
@@ -81,9 +83,18 @@ export function CheckoutLinkPanel({ order, initialUrl, children }: Props) {
       </div>
 
       {rotate.isError && (
-        <p role="alert" className="text-sm text-danger">
-          {messageFor(rotate.error)}
-        </p>
+        <div className="space-y-2">
+          <p role="alert" className="text-sm text-danger">
+            {messageFor(rotate.error)}
+          </p>
+          <RestartAttempt
+            error={rotate.error}
+            onRestart={() => {
+              rotateKey.renew();
+              rotate.reset();
+            }}
+          />
+        </div>
       )}
     </div>
   );

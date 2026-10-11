@@ -5,6 +5,7 @@ import type { Order } from "../order/types";
 import { ConfirmDialog } from "../support/ConfirmDialog";
 import { copyToClipboard } from "../support/copyToClipboard";
 import { messageFor } from "../support/gatewayError";
+import { RestartAttempt } from "../support/RestartAttempt";
 import { Button } from "../support/ui/Button";
 import { useIdempotencyKey } from "../support/useIdempotencyKey";
 import { subscriptionKeys } from "./subscriptionApi";
@@ -40,6 +41,7 @@ export function InvoiceLinkButton({ invoice, subscriptionId }: Props) {
       setOutcome(copied ? { kind: "copied" } : { kind: "shown", url });
     },
     gcTime: 0,
+    onError: (error) => rotateKey.renewIfNothingWasCreated(error),
     // A line saying "copiado" next to a fresh error would tell two stories.
     onMutate: () => setOutcome(null),
     onSettled: () => setConfirming(false),
@@ -83,9 +85,18 @@ export function InvoiceLinkButton({ invoice, subscriptionId }: Props) {
       )}
 
       {rotate.isError && (
-        <p role="alert" className="text-xs text-danger">
-          {messageFor(rotate.error)}
-        </p>
+        <div className="space-y-1">
+          <p role="alert" className="text-xs text-danger">
+            {messageFor(rotate.error)}
+          </p>
+          <RestartAttempt
+            error={rotate.error}
+            onRestart={() => {
+              rotateKey.renew();
+              rotate.reset();
+            }}
+          />
+        </div>
       )}
 
       {confirming && (

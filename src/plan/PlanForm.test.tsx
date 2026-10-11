@@ -4,6 +4,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { setAccessToken } from "../auth/session";
 import { server } from "../test/msw/server";
+import { serverError, withTheGatewayKeyRule } from "../test/idempotency";
 import { renderWithProviders } from "../test/render";
 import { PlanForm } from "./PlanForm";
 
@@ -66,19 +67,14 @@ describe("PlanForm", () => {
     expect(keys[0]).toMatch(/^[0-9a-f-]{36}$/);
   });
 
-  it("aGatewayErrorIsShownAndTheKeyIsKept", async () => {
+  it("anUncertainFailureKeepsTheKeyUntilTheOperatorStartsOver", async () => {
     const keys: (string | null)[] = [];
-    let calls = 0;
+    const answer = withTheGatewayKeyRule(() => serverError());
     server.use(
       http.post("http://localhost:8080/v1/plans", ({ request }) => {
-        keys.push(request.headers.get("Idempotency-Key"));
-        calls += 1;
-        return calls === 1
-          ? HttpResponse.json(
-              { type: "urn:gateway:INVALID_REQUEST", status: 400, detail: "x" },
-              { status: 400 },
-            )
-          : HttpResponse.json(created, { status: 201 });
+        const key = request.headers.get("Idempotency-Key");
+        keys.push(key);
+        return answer(key);
       }),
     );
     renderForm();
@@ -86,11 +82,42 @@ describe("PlanForm", () => {
     await userEvent.type(screen.getByLabelText("Nome"), "A");
     await userEvent.type(screen.getByLabelText("Valor"), "1");
     await userEvent.click(screen.getByRole("button", { name: "Criar plano" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Requisição inválida.");
-
+    await screen.findByRole("alert");
     await userEvent.click(screen.getByRole("button", { name: "Criar plano" }));
-    await vi.waitFor(() => expect(calls).toBe(2));
+
     // Same intent, same key: a retry after a failure must replay, not duplicate.
+    await vi.waitFor(() => expect(keys).toHaveLength(2));
     expect(keys[1]).toBe(keys[0]);
+
+    await userEvent.click(await screen.findByRole("button", { name: "Recomeçar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Criar plano" }));
+    await vi.waitFor(() => expect(keys).toHaveLength(3));
+    expect(keys[2]).not.toBe(keys[0]);
+  });
+
+  it("aRefusalThenAFixSendsANewKey", async () => {
+    const keys: (string | null)[] = [];
+    server.use(
+      http.post("http://localhost:8080/v1/plans", ({ request }) => {
+        keys.push(request.headers.get("Idempotency-Key"));
+        return keys.length === 1
+          ? HttpResponse.json(
+              { type: "urn:gateway:INVALID_REQUEST", status: 400, detail: "x" },
+              { status: 400 },
+            )
+          : HttpResponse.json(created, { status: 201 });
+      }),
+    );
+    const onCreated = renderForm();
+
+    await userEvent.type(screen.getByLabelText("Nome"), "A");
+    await userEvent.type(screen.getByLabelText("Valor"), "1");
+    await userEvent.click(screen.getByRole("button", { name: "Criar plano" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Requisição inválida.");
+    await userEvent.type(screen.getByLabelText("Nome"), "B");
+    await userEvent.click(screen.getByRole("button", { name: "Criar plano" }));
+
+    await vi.waitFor(() => expect(onCreated).toHaveBeenCalled());
+    expect(keys[1]).not.toBe(keys[0]);
   });
 });
