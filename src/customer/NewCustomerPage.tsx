@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState, type FormEvent } from "react";
-import { useNavigate } from "react-router";
+import { Navigate, useNavigate } from "react-router";
+import { can } from "../auth/permissions";
+import { useMe } from "../auth/useMe";
 import { GatewayRequestError, messageFor } from "../support/gatewayError";
 import { Button } from "../support/ui/Button";
 import { Card } from "../support/ui/Card";
@@ -47,7 +49,23 @@ function toBody(fields: Fields): NewCustomer {
   };
 }
 
+// Reachable by URL even when the nav hides it. Waits for `me` instead of using useCan, which is
+// false while loading and would bounce a FINANCE user away on a cold load.
 export function NewCustomerPage() {
+  const role = useMe().data?.user.role;
+
+  if (role === undefined) {
+    return null;
+  }
+
+  if (!can(role, "create_customer")) {
+    return <Navigate to="/app/customers" replace />;
+  }
+
+  return <NewCustomerForm />;
+}
+
+function NewCustomerForm() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const idempotencyKey = useRef(crypto.randomUUID());

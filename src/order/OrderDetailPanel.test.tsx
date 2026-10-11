@@ -1,18 +1,20 @@
 import { act, screen } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { storeApiKey } from "../auth/apiKey";
+import { setAccessToken } from "../auth/session";
 import { server } from "../test/msw/server";
 import { anOrder, aPayment } from "../test/fixtures/orders";
+import { aMe } from "../test/me";
 import { renderWithProviders } from "../test/render";
 import { OrderDetailPanel } from "./OrderDetailPanel";
 
 const BASE = "http://localhost:8080/v1/orders/ord_00000001";
 
 function renderPage() {
-  storeApiKey("gk_test_abc");
+  setAccessToken("gs_test");
   return renderWithProviders([{ path: "/app/orders/:id", element: <OrderDetailPanel /> }], {
     initialEntries: ["/app/orders/ord_00000001"],
+    me: aMe({ role: "OWNER" }),
   });
 }
 

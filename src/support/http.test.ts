@@ -16,7 +16,7 @@ describe("request", () => {
     const { data } = await request<{ id: string }>("/v1/orders", {
       method: "POST",
       body: { amount: 1 },
-      apiKey: "gk_test_x",
+      headers: { Authorization: "Bearer gk_test_x" },
       idempotencyKey: "k1",
     });
 
@@ -35,7 +35,9 @@ describe("request", () => {
       ),
     );
 
-    await expect(request("/v1/orders/nope", { apiKey: "k" })).rejects.toMatchObject({
+    await expect(
+      request("/v1/orders/nope", { headers: { Authorization: "Bearer k" } }),
+    ).rejects.toMatchObject({
       error: { code: "NOT_FOUND", status: 404 },
     });
   });

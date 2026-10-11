@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useCan } from "../auth/useCan";
 import { ConfirmDialog } from "../support/ConfirmDialog";
 import { messageFor } from "../support/gatewayError";
 import { Button } from "../support/ui/Button";
@@ -12,11 +13,13 @@ type Props = { order: Order; attempts: Payment[] };
 
 const REFUND_LOCK_MS = 120_000;
 
-type Open ="cancel" | "refund" | null;
+type Open = "cancel" | "refund" | null;
 
 export function OrderActions({ order, attempts }: Props) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState<Open>(null);
+  const mayCancel = useCan("cancel");
+  const mayRefund = useCan("refund");
 
   const completed = attempts.find((attempt) => attempt.status === "COMPLETED");
   const refundable = completed
@@ -88,17 +91,27 @@ export function OrderActions({ order, attempts }: Props) {
     refund.reset();
   }
 
+  const showCancel = mayCancel && order.status === "OPEN";
+  const showRefund = mayRefund && completed !== undefined && refundable > 0 && !locked;
+  // A status, not an action: every role is told why no refund is on offer.
+  const showLocked = locked;
+
+  // No empty card for a role that may do none of it.
+  if (!showCancel && !showRefund && !showLocked && open === null) {
+    return null;
+  }
+
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {order.status === "OPEN" && (
+      {showCancel && (
         <Button variant="danger-ghost" size="sm" onClick={() => setOpen("cancel")}>
           Cancelar cobrança
         </Button>
       )}
 
-      {locked && <span className="text-sm text-muted">Reembolso em processamento</span>}
+      {showLocked && <span className="text-sm text-muted">Reembolso em processamento</span>}
 
-      {completed && refundable > 0 && !locked && (
+      {showRefund && (
         <Button variant="ghost" size="sm" onClick={() => setOpen("refund")}>
           Reembolsar
         </Button>

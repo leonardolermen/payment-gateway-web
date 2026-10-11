@@ -1,8 +1,11 @@
-import { screen, waitFor } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { storeApiKey } from "../auth/apiKey";
+import { meKeys } from "../auth/authApi";
+import { setAccessToken } from "../auth/session";
+import type { Role } from "../auth/types";
+import { aMe } from "../test/me";
 import { anOrder, aPayment } from "../test/fixtures/orders";
 import { server } from "../test/msw/server";
 import { renderWithProviders } from "../test/render";
@@ -11,11 +14,12 @@ import type { Order, Payment } from "./types";
 
 const API = "http://localhost:8080/v1";
 
-function renderActions(order: Order, attempts: Payment[] = []) {
-  storeApiKey("gk_test_abc");
-  return renderWithProviders([
-    { path: "/", element: <OrderActions order={order} attempts={attempts} /> },
-  ]);
+function renderActions(order: Order, attempts: Payment[] = [], role: Role = "OWNER") {
+  setAccessToken("gs_test");
+  return renderWithProviders(
+    [{ path: "/", element: <OrderActions order={order} attempts={attempts} /> }],
+    { me: aMe({ role }) },
+  );
 }
 
 const paid = () => aPayment({ status: "COMPLETED", paid_amount: 4990, refunded_amount: 0 });
@@ -157,7 +161,9 @@ describe("OrderActions idempotency keys", () => {
     server.use(
       http.post(`${API}/payments/pay_00000001/refunds`, ({ request }) => {
         keys.push(request.headers.get("Idempotency-Key"));
-        return keys.length === 1 ? HttpResponse.error() : HttpResponse.json({ id: "ref_1" }, { status: 201 });
+        return keys.length === 1
+          ? HttpResponse.error()
+          : HttpResponse.json({ id: "ref_1" }, { status: 201 });
       }),
     );
     renderActions(anOrder({ status: "PAID" }), [paid()]);
@@ -212,5 +218,45 @@ describe("OrderActions idempotency keys", () => {
 
     await waitFor(() => expect(keys).toHaveLength(2));
     expect(keys[1]).not.toBe(keys[0]);
+  });
+
+  it("readonlySeesNoCancelButtonAndNoEmptyBlock", () => {
+    const { container } = renderActions(anOrder({ status: "OPEN" }), [], "READONLY");
+
+    expect(screen.queryByRole("button", { name: "Cancelar cobrança" })).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("readonlySeesNoRefundButtonAndNoEmptyBlock", () => {
+    const { container } = renderActions(anOrder({ status: "PAID" }), [paid()], "READONLY");
+
+    expect(screen.queryByRole("button", { name: "Reembolsar" })).not.toBeInTheDocument();
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("readonlyStillSeesThatARefundIsInFlight", async () => {
+    server.use(
+      http.get(`${API}/orders/ord_00000001/payments`, () => HttpResponse.json([paid()])),
+      http.post(`${API}/payments/pay_00000001/refunds`, () =>
+        HttpResponse.json({ id: "ref_1" }, { status: 202 }),
+      ),
+    );
+    const { queryClient } = renderActions(anOrder({ status: "PAID" }), [paid()]);
+    await userEvent.click(screen.getByRole("button", { name: "Reembolsar" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirmar reembolso" }));
+    await screen.findByText("Reembolso em processamento");
+
+    // The same screen, seen by someone who may only read.
+    act(() => queryClient.setQueryData(meKeys.me, aMe({ role: "READONLY" })));
+
+    expect(screen.getByText("Reembolso em processamento")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reembolsar" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancelar cobrança" })).not.toBeInTheDocument();
+  });
+
+  it("financeSeesCancelAndRefund", async () => {
+    renderActions(anOrder({ status: "OPEN" }), [], "FINANCE");
+
+    expect(await screen.findByRole("button", { name: "Cancelar cobrança" })).toBeInTheDocument();
   });
 });

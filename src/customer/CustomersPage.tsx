@@ -1,5 +1,6 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "react-router";
+import { useCan } from "../auth/useCan";
 import { formatDateTime } from "../support/dates";
 import { Button } from "../support/ui/Button";
 import { buttonClasses } from "../support/ui/buttonClasses";
@@ -11,6 +12,8 @@ import { CUSTOMER_PAGE_SIZE, customerKeys, listCustomers } from "./customerApi";
 const HEADERS = ["Nome", "Documento", "E-mail", "Criado em"];
 
 export function CustomersPage() {
+  const mayCreateCustomer = useCan("create_customer");
+
   const query = useInfiniteQuery({
     queryKey: customerKeys.list,
     queryFn: ({ pageParam }) => listCustomers({ cursor: pageParam, limit: CUSTOMER_PAGE_SIZE }),
@@ -25,9 +28,11 @@ export function CustomersPage() {
       <PageHeader
         title="Clientes"
         action={
-          <Link to="/app/customers/new" className={buttonClasses()}>
-            <span aria-hidden="true">+</span>Novo cliente
-          </Link>
+          mayCreateCustomer ? (
+            <Link to="/app/customers/new" className={buttonClasses()}>
+              <span aria-hidden="true">+</span>Novo cliente
+            </Link>
+          ) : undefined
         }
       />
 

@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link, useMatch, useNavigate } from "react-router";
+import { useCan } from "../auth/useCan";
 import { formatDateTime } from "../support/dates";
 import { formatBrl } from "../support/money";
 import { Button } from "../support/ui/Button";
@@ -28,6 +29,7 @@ type Props = { onNewOrder: () => void };
 export function OrdersList({ onNewOrder }: Props) {
   const selectedId = useMatch("/app/orders/:id")?.params.id;
   const navigate = useNavigate();
+  const mayCreateCharge = useCan("create_charge");
   const [status, setStatus] = useState<OrderStatus | "">("");
   const filter = status || undefined;
 
@@ -64,9 +66,11 @@ export function OrdersList({ onNewOrder }: Props) {
                 ))}
               </select>
             </label>
-            <Button onClick={onNewOrder}>
-              <span aria-hidden="true">+</span>Nova cobrança
-            </Button>
+            {mayCreateCharge && (
+              <Button onClick={onNewOrder}>
+                <span aria-hidden="true">+</span>Nova cobrança
+              </Button>
+            )}
           </div>
         }
       />

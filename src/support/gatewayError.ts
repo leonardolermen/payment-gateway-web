@@ -64,6 +64,19 @@ const MESSAGES: Record<string, string> = {
   CUSTOMER_INVALID: "Dados do cliente inválidos.",
   INVALID_REQUEST: "Requisição inválida.",
   RATE_LIMITED: "Muitas tentativas. Aguarde um instante.",
+  EMAIL_TAKEN: "Este e-mail já tem conta.",
+  WEAK_PASSWORD: "A senha precisa ter pelo menos 10 caracteres.",
+  INVALID_CREDENTIALS: "E-mail ou senha incorretos.",
+  SESSION_EXPIRED: "Sua sessão expirou. Entre de novo.",
+  TOKEN_EXPIRED: "Este link não vale mais.",
+  ALREADY_VERIFIED: "Seu e-mail já está confirmado.",
+  RESEND_TOO_SOON: "Aguarde alguns minutos antes de reenviar.",
+  AUTH_BUSY: "Muita gente entrando agora. Tente em instantes.",
+  EMAIL_NOT_VERIFIED: "Confirme seu e-mail para usar produção.",
+  FORBIDDEN_FOR_ROLE: "Seu papel não permite esta ação.",
+  LAST_OWNER: "A loja precisa de pelo menos um dono.",
+  OWN_ACCOUNT: "Use Minha conta para a sua própria conta.",
+  ORIGIN_NOT_ALLOWED: "Origem não permitida.",
 };
 
 export function messageFor(error: unknown): string {
