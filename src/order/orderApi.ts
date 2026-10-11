@@ -5,7 +5,7 @@ import type { Order, OrderStatus, Payment } from "./types";
 
 export const PAGE_SIZE = 20;
 
-type ListParams = { status?: OrderStatus; cursor?: string; limit?: number };
+type ListParams = { status?: OrderStatus; customer_id?: string; cursor?: string; limit?: number };
 
 export const orderKeys = {
   all: ["orders"] as const,
@@ -18,6 +18,9 @@ export async function listOrders(params: ListParams): Promise<Order[]> {
   const query = new URLSearchParams();
   if (params.status) {
     query.set("status", params.status);
+  }
+  if (params.customer_id) {
+    query.set("customer_id", params.customer_id);
   }
   if (params.cursor) {
     query.set("cursor", params.cursor);

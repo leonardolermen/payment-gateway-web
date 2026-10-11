@@ -35,6 +35,11 @@ export async function listCustomers(params: ListParams): Promise<Customer[]> {
   return data;
 }
 
+export async function getCustomer(id: string): Promise<Customer> {
+  const { data } = await merchantRequest<Customer>(`/v1/customers/${id}`);
+  return data;
+}
+
 // The API answers with a list of zero or one item.
 export async function findByDocument(document: string): Promise<Customer | null> {
   const customers = await listCustomers({ document });

@@ -18,6 +18,17 @@ export type Customer = {
   updated_at: string;
 };
 
+// A card the gateway vaulted for this customer; the panel only ever sees the brand and last four.
+export type SavedCard = {
+  id: string;
+  brand: string;
+  last4: string;
+  // "MM/YYYY", as the API sends it.
+  expiry: string;
+  holder: string;
+  created_at: string;
+};
+
 export type NewCustomer = {
   name: string;
   document: string;

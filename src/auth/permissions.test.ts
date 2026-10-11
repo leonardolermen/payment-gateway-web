@@ -34,3 +34,12 @@ describe("can", () => {
     }
   });
 });
+
+describe("customer actions", () => {
+  it("onlyTheOwnerEditsCustomersAndRemovesCards", () => {
+    expect(can("FINANCE", "edit_customer")).toBe(false);
+    expect(can("FINANCE", "delete_card")).toBe(false);
+    expect(can("OWNER", "edit_customer")).toBe(true);
+    expect(can("OWNER", "delete_card")).toBe(true);
+  });
+});
