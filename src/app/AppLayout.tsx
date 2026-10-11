@@ -36,6 +36,9 @@ export function AppLayout() {
             <NavLink to="/app/customers" className={navClass}>
               Clientes
             </NavLink>
+            <NavLink to="/app/subscriptions" className={navClass}>
+              Assinaturas
+            </NavLink>
             <NavLink to="/app/plans" className={navClass}>
               Planos
             </NavLink>

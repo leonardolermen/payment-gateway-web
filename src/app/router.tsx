@@ -14,6 +14,8 @@ import { OrderDetailPanel } from "../order/OrderDetailPanel";
 import { NoOrderSelected, OrdersWorkspace } from "../order/OrdersWorkspace";
 import { PlansPage } from "../plan/PlansPage";
 import { SettingsPage } from "../settings/SettingsPage";
+import { NoSubscriptionSelected } from "../subscription/NoSubscriptionSelected";
+import { SubscriptionsWorkspace } from "../subscription/SubscriptionsWorkspace";
 import { AppLayout } from "./AppLayout";
 
 export const router = createBrowserRouter([
@@ -46,6 +48,15 @@ export const router = createBrowserRouter([
           { path: "customers", element: <CustomersPage /> },
           { path: "customers/new", element: <NewCustomerPage /> },
           { path: "customers/:id", element: <CustomerDetailPage /> },
+          {
+            path: "subscriptions",
+            element: <SubscriptionsWorkspace />,
+            children: [
+              { index: true, element: <NoSubscriptionSelected /> },
+              // No detail panel yet: a row's link lands on the hint instead of a 404.
+              { path: ":id", element: <NoSubscriptionSelected /> },
+            ],
+          },
           { path: "plans", element: <PlansPage /> },
           { path: "settings", element: <SettingsPage /> },
         ],
